@@ -221,9 +221,9 @@ mod tests {
                     chroma: Chroma::C420,
                     alpha: None,
                 },
-                color: filmcraft_color::ColorInfo::SRGB_FULL,
+                color: reelwright_color::ColorInfo::SRGB_FULL,
                 par: (1, 1),
-                pts: filmcraft_time::Tick::ZERO,
+                pts: reelwright_time::Tick::ZERO,
             })
         };
         let before = stats().reused;

@@ -8,52 +8,52 @@ version = "0.4.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
-repository = "https://github.com/storytold/filmcraft"
+repository = "https://github.com/game7ballJT/reelwright"
 
 [workspace.dependencies]
 # internal
-filmcraft-time = { path = "crates/time" }
-filmcraft-geom = { path = "crates/geom" }
-filmcraft-color = { path = "crates/color" }
-filmcraft-bitstream = { path = "crates/bitstream" }
-filmcraft-isobmff = { path = "crates/isobmff" }
-filmcraft-matroska = { path = "crates/matroska" }
-filmcraft-mxf = { path = "crates/mxf" }
-filmcraft-cfb = { path = "crates/cfb" }
-filmcraft-mpegts = { path = "crates/mpegts" }
-filmcraft-mpeg2v = { path = "crates/mpeg2v" }
-filmcraft-ac3 = { path = "crates/ac3" }
-filmcraft-ogg = { path = "crates/ogg" }
-filmcraft-h264 = { path = "crates/h264" }
-filmcraft-hevc = { path = "crates/hevc" }
-filmcraft-vp9 = { path = "crates/vp9" }
-filmcraft-prores = { path = "crates/prores" }
-filmcraft-dnx = { path = "crates/dnx" }
-filmcraft-apv = { path = "crates/apv" }
-filmcraft-av1 = { path = "crates/av1" }
-filmcraft-aac = { path = "crates/aac" }
-filmcraft-opus = { path = "crates/opus" }
-filmcraft-h264enc = { path = "crates/h264enc" }
-filmcraft-audio-dsp = { path = "crates/audio-dsp" }
-filmcraft-frame = { path = "crates/frame" }
-filmcraft-media = { path = "crates/media" }
-filmcraft-codecs = { path = "crates/codecs" }
-filmcraft-project = { path = "crates/project" }
-filmcraft-edit = { path = "crates/edit" }
-filmcraft-interchange = { path = "crates/interchange" }
-filmcraft-text = { path = "crates/text" }
-filmcraft-captions = { path = "crates/captions" }
-filmcraft-speech = { path = "crates/speech" }
-filmcraft-render = { path = "crates/render" }
-filmcraft-gpu = { path = "crates/gpu" }
-filmcraft-scopes = { path = "crates/scopes" }
-filmcraft-export = { path = "crates/export" }
-filmcraft-format = { path = "crates/format" }
-filmcraft-engine = { path = "crates/engine" }
-filmcraft-ui-egui = { path = "crates/ui-egui" }
-filmcraft-automation = { path = "crates/automation" }
-filmcraft-platform = { path = "crates/platform" }
-filmcraft-testkit = { path = "crates/testkit" }
+reelwright-time = { path = "crates/time" }
+reelwright-geom = { path = "crates/geom" }
+reelwright-color = { path = "crates/color" }
+reelwright-bitstream = { path = "crates/bitstream" }
+reelwright-isobmff = { path = "crates/isobmff" }
+reelwright-matroska = { path = "crates/matroska" }
+reelwright-mxf = { path = "crates/mxf" }
+reelwright-cfb = { path = "crates/cfb" }
+reelwright-mpegts = { path = "crates/mpegts" }
+reelwright-mpeg2v = { path = "crates/mpeg2v" }
+reelwright-ac3 = { path = "crates/ac3" }
+reelwright-ogg = { path = "crates/ogg" }
+reelwright-h264 = { path = "crates/h264" }
+reelwright-hevc = { path = "crates/hevc" }
+reelwright-vp9 = { path = "crates/vp9" }
+reelwright-prores = { path = "crates/prores" }
+reelwright-dnx = { path = "crates/dnx" }
+reelwright-apv = { path = "crates/apv" }
+reelwright-av1 = { path = "crates/av1" }
+reelwright-aac = { path = "crates/aac" }
+reelwright-opus = { path = "crates/opus" }
+reelwright-h264enc = { path = "crates/h264enc" }
+reelwright-audio-dsp = { path = "crates/audio-dsp" }
+reelwright-frame = { path = "crates/frame" }
+reelwright-media = { path = "crates/media" }
+reelwright-codecs = { path = "crates/codecs" }
+reelwright-project = { path = "crates/project" }
+reelwright-edit = { path = "crates/edit" }
+reelwright-interchange = { path = "crates/interchange" }
+reelwright-text = { path = "crates/text" }
+reelwright-captions = { path = "crates/captions" }
+reelwright-speech = { path = "crates/speech" }
+reelwright-render = { path = "crates/render" }
+reelwright-gpu = { path = "crates/gpu" }
+reelwright-scopes = { path = "crates/scopes" }
+reelwright-export = { path = "crates/export" }
+reelwright-format = { path = "crates/format" }
+reelwright-engine = { path = "crates/engine" }
+reelwright-ui-egui = { path = "crates/ui-egui" }
+reelwright-automation = { path = "crates/automation" }
+reelwright-platform = { path = "crates/platform" }
+reelwright-testkit = { path = "crates/testkit" }
 
 # foundation
 thiserror = "2"
@@ -87,43 +87,70 @@ opt-level = 2
 opt-level = 1
 
 # Codec hot loops: debug-build tests (RFC/oracle vectors) are minutes slower below opt-level 3.
-[profile.dev.package.filmcraft-h264]
+[profile.dev.package.reelwright-h264]
 opt-level = 3
 
-[profile.dev.package.filmcraft-h264enc]
+[profile.dev.package.reelwright-h264enc]
 opt-level = 3
 
-[profile.dev.package.filmcraft-hevc]
+[profile.dev.package.reelwright-hevc]
 opt-level = 3
 
-[profile.dev.package.filmcraft-prores]
+[profile.dev.package.reelwright-prores]
 opt-level = 3
 
-[profile.dev.package.filmcraft-dnx]
+[profile.dev.package.reelwright-dnx]
 opt-level = 3
 
-[profile.dev.package.filmcraft-apv]
+[profile.dev.package.reelwright-apv]
 opt-level = 3
 
-[profile.dev.package.filmcraft-av1]
+[profile.dev.package.reelwright-av1]
 opt-level = 3
 
-[profile.dev.package.filmcraft-aac]
+[profile.dev.package.reelwright-aac]
 opt-level = 3
 
 # Audio effects: realtime-factor tests and long convolution / spectral runs.
-[profile.dev.package.filmcraft-audio-dsp]
+[profile.dev.package.reelwright-audio-dsp]
 opt-level = 3
 
-[profile.dev.package.filmcraft-mxf]
+[profile.dev.package.reelwright-mxf]
 opt-level = 3
 
-[profile.dev.package.filmcraft-opus]
+[profile.dev.package.reelwright-opus]
 opt-level = 3
 
-[profile.dev.package.filmcraft-vp9]
+[profile.dev.package.reelwright-vp9]
 opt-level = 3
 
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# The browser build (`cargo xtask web`): small code everywhere (opt-level "s", fat LTO, no debug info),
+# full speed in the codecs, compositor and audio DSP that run on the one browser thread.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+
+[profile.wasm-release.package."*"]
+opt-level = "s"
+
+[profile.wasm-release.package.reelwright-h264]
+opt-level = 3
+[profile.wasm-release.package.reelwright-h264enc]
+opt-level = 3
+[profile.wasm-release.package.reelwright-render]
+opt-level = 3
+[profile.wasm-release.package.reelwright-frame]
+opt-level = 3
+[profile.wasm-release.package.reelwright-color]
+opt-level = 3
+[profile.wasm-release.package.reelwright-audio-dsp]
+opt-level = 3
+[profile.wasm-release.package.reelwright-aac]
+opt-level = 3

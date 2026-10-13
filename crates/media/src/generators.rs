@@ -7,9 +7,9 @@
 use std::f32::consts::{PI, TAU};
 use std::sync::Arc;
 
-use filmcraft_color::ColorInfo;
-use filmcraft_frame::{AudioBuffer, VideoFrame};
-use filmcraft_time::{FrameRate, TICKS_PER_SECOND, Tick};
+use reelwright_color::ColorInfo;
+use reelwright_frame::{AudioBuffer, VideoFrame};
+use reelwright_time::{FrameRate, TICKS_PER_SECOND, Tick};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 

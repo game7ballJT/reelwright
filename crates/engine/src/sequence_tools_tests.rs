@@ -1,7 +1,7 @@
 //! Sequence / Markers menu commands (`sequence_tools`).
 
 use super::*;
-use filmcraft_project::{AudioChannels, Label, MarkerKind, TrackKind};
+use reelwright_project::{AudioChannels, Label, MarkerKind, TrackKind};
 use serde_json::json;
 
 fn demo() -> Session {

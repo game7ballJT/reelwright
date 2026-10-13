@@ -22,7 +22,7 @@ to a 12 GB footprint, 10.8 GB of it live heap in three piles.
 1. **Media files read whole (2.9 GB), MEM1.** The desktop host had no `Services::reader`, so
    `MediaPool::open_file` fell back to `read_file` and every clip's bytes stayed in memory for as
    long as its source was open. `FsServices::reader` now returns a
-   `filmcraft_media::reader::FileReader`: the file stays open and containers read their index and
+   `reelwright_media::reader::FileReader`: the file stays open and containers read their index and
    then single samples with positional reads, as the web host already did through `BlobReader`
    ([web.md](web.md)). Formats decoded in one go (stills, WAV, MPEG elementary streams) are still
    read whole through the reader.
@@ -46,7 +46,7 @@ to a 12 GB footprint, 10.8 GB of it live heap in three piles.
 4. **Freed planes the allocator keeps (2.5 GB), MEM4.** With MEM1–MEM3 the same twelve clips took
    5.1 GB, only 2.5 GB of it live: every decoded picture allocated three planes and every
    eviction freed them, and the system allocator kept the freed pages (`footprint`: 1.7 GB
-   reclaimable). `filmcraft_frame::pool` now keeps the planes of evicted frames (up to 192 MiB per
+   reclaimable). `reelwright_frame::pool` now keeps the planes of evicted frames (up to 192 MiB per
    sample type; a frame something else still holds is left alone) and the H.264 decoder and the
    VideoToolbox path decode into them, so steady-state decoding allocates no planes.
    `perf.stats` reports `decode.planePoolMB` and `decode.planesReused`.
@@ -73,7 +73,7 @@ two builds ran alternately in the same session and the median is reported.
 
 ### Per frame, synthetic 1080p sources
 
-`cargo run --release -p filmcraft-render --example frame_bench`: an 8-bit 4:2:0 camera picture and a
+`cargo run --release -p reelwright-render --example frame_bench`: an 8-bit 4:2:0 camera picture and a
 10-bit 4:4:4 banner with alpha only in its bottom 100 rows; `render_sequence` followed by the
 conversion to 8-bit RGBA, milliseconds per frame (median of 40 frames, 5 alternating rounds):
 
@@ -191,7 +191,7 @@ and an outro.
 
 | encoder | wall time | frames/s | vs real time | file |
 |---|---|---|---|---|
-| built-in (`filmcraft-h264enc`) | 793 s | 17.9 | 1.4× slower | 1445 MB, 20.0 Mb/s |
+| built-in (`reelwright-h264enc`) | 793 s | 17.9 | 1.4× slower | 1445 MB, 20.0 Mb/s |
 | hardware (VideoToolbox) | **311 s** | **45.7** | 1.8× faster | 1417 MB, 19.6 Mb/s |
 
 2.5× faster. The first 134 s of the same timeline, where the overlays are densest (intro, a banner, a
@@ -199,7 +199,7 @@ subscribe bar and the outro in 134 s):
 
 | encoder | wall time | frames/s | vs real time | file |
 |---|---|---|---|---|
-| built-in (`filmcraft-h264enc`) | 395 s | 8.5 | 2.9× slower | 340 MB, 20.0 Mb/s |
+| built-in (`reelwright-h264enc`) | 395 s | 8.5 | 2.9× slower | 340 MB, 20.0 Mb/s |
 | hardware (VideoToolbox) | **84 s** | **39.9** | 1.6× faster | 312 MB, 18.3 Mb/s |
 
 4.7× faster there. The gain depends on what else an export spends its time on: with the encoder
@@ -235,7 +235,7 @@ compositor and the decoders, not by the encoder, so a different hardware codec d
 
 ### Quality per bit
 
-30 s with a banner (15–45 s of that timeline), exported by FilmCraft as ProRes 422 HQ (the reference)
+30 s with a banner (15–45 s of that timeline), exported by Reelwright as ProRes 422 HQ (the reference)
 and by each encoder at several bitrates; ffmpeg's `psnr` and `ssim` of the decoded 4:2:0 pictures against
 the reference. Average PSNR over the three planes, and SSIM (higher is better):
 
@@ -261,7 +261,7 @@ with `--hw off` / `--hw auto`, 2026-10-07: Intel Xeon E5-2680 v4 (14 cores / 28 
 NVIDIA GeForce RTX 5060 8 GB (driver 617.14), Windows 11 Pro 26200, idle machine. Two alternating
 rounds; the table gives the range of the two (decode: best of 3 within each). Reproduce with
 `cargo xtask bench --sections decode --only dec_h264 --repeat 3 --hw off|auto` (likewise `dec_hevc`)
-and `--sections playback --only "h264-2160 full" --hw off|auto`; set `FILMCRAFT_FFMPEG` if ffmpeg is not
+and `--sections playback --only "h264-2160 full" --hw off|auto`; set `REELWRIGHT_FFMPEG` if ffmpeg is not
 on `PATH` for the fixture generator. Pictures are identical either way (bit-exact parity tests,
 `crates/platform/tests/media_foundation.rs`). The decoder MFTs were Microsoft's H.264 decoder
 (`Microsoft H264 Video Decoder MFT`) and the `HEVCVideoExtension` decoder, both decoding with DXVA
@@ -650,7 +650,7 @@ decode 2642 / 2925 → 2506 / 2064; playback 5246 / 7903 → 3379 / 3121; scrub 
 2. **No redundant plane copies**: H.264 / HEVC / VP9 pictures are moved into `VideoFrame`s instead
    of copied (12 MB per 2160p frame; HEVC 10-bit also lost a per-sample widening pass).
 3. **Catch-up decoding**: frame jobs carry how far before their frame the playhead is
-   (`filmcraft_media::cancel::with_catch_up`); the GOP cache skips non-reference samples of late
+   (`reelwright_media::cancel::with_catch_up`); the GOP cache skips non-reference samples of late
    frames (`VideoDecoder::is_disposable`: H.264 `nal_ref_idc` 0, HEVC sub-layer non-reference
    pictures of the top temporal layer). Scrub requests keep the last 2 s fully decoded so dragging
    back stays cached. The wanted frame is decoded exactly as before; a later request for a skipped

@@ -47,7 +47,7 @@ fn defaults_follow_the_registry_and_the_premiere_audit() {
     let mut s = Session::default();
     with_ui_commands(&mut s);
     let sc = &s.shortcuts;
-    assert_eq!(sc.preset, "FilmCraft Default");
+    assert_eq!(sc.preset, "Reelwright Default");
     assert_eq!(sc.primary("sequence.addEdit").as_deref(), Some("Cmd+K"));
     assert_eq!(sc.primary("playback.toggle").as_deref(), Some("Space"));
     // the audit adopts Premiere defaults for commands that had none
@@ -85,12 +85,14 @@ fn assign_reassigns_conflicts_and_undoes() {
     s.execute("shortcuts.set", json!({"command": "edit.undo", "keys": "Cmd+Z", "add": true})).unwrap();
     assert_eq!(s.shortcuts.for_command("edit.undo").iter().filter(|b| b.panel.is_none()).count(), 2);
     let r = s.execute("shortcuts.set", json!({"command": "edit.redo", "keys": "M", "keepConflicts": true})).unwrap();
-    assert_eq!(r["conflicts"].as_array().unwrap().len(), 1, "{r}");
+    // (on Windows Cmd and Ctrl are one key, so the stock table reports a few other conflicts too)
+    let on_m = r["conflicts"].as_array().unwrap().iter().filter(|c| c["keys"] == json!("M")).count();
+    assert_eq!(on_m, 1, "{r}");
     let c = s.execute("shortcuts.conflicts", json!({"platform": "mac"})).unwrap();
     assert_eq!(c["conflicts"][0]["keys"], json!("M"));
     // undo / redo within the editor
     s.execute("shortcuts.undo", json!({})).unwrap();
-    assert!(s.execute("shortcuts.conflicts", json!({})).unwrap()["conflicts"].as_array().unwrap().is_empty());
+    assert!(s.execute("shortcuts.conflicts", json!({"platform": "mac"})).unwrap()["conflicts"].as_array().unwrap().is_empty());
     s.execute("shortcuts.undo", json!({})).unwrap();
     s.execute("shortcuts.undo", json!({})).unwrap();
     assert_eq!(s.shortcuts.primary("edit.undo").as_deref(), Some("Cmd+Z"));
@@ -149,7 +151,7 @@ fn compat_presets_map_other_editors() {
     assert_eq!(s.shortcuts.for_command("markers.markIn").len(), 2, "I and E");
     assert!(!s.shortcuts.modified);
     assert!(s.execute("shortcuts.loadPreset", json!({"name": "Nope"})).is_err());
-    s.execute("shortcuts.loadPreset", json!({"name": "FilmCraft Default"})).unwrap();
+    s.execute("shortcuts.loadPreset", json!({"name": "Reelwright Default"})).unwrap();
     assert_eq!(s.shortcuts.primary("source.insert").as_deref(), Some(","));
 }
 
@@ -164,14 +166,14 @@ fn custom_presets_persist_export_and_import() {
     let p = s.execute("shortcuts.presets", json!({})).unwrap();
     assert_eq!(p["active"], json!("My Keys"));
     assert_eq!(p["custom"], json!(["My Keys"]));
-    assert!(s.execute("shortcuts.savePreset", json!({"name": "FilmCraft Default"})).is_err());
+    assert!(s.execute("shortcuts.savePreset", json!({"name": "Reelwright Default"})).is_err());
     // the active set survives a restart
     let mut t = Shortcuts::new();
     t.set_dir(&dir);
     assert_eq!(t.preset, "My Keys");
     assert_eq!(t.primary("sequence.addEdit").as_deref(), Some("Cmd+Shift+B"));
     // switch away and back
-    s.execute("shortcuts.loadPreset", json!({"name": "FilmCraft Default"})).unwrap();
+    s.execute("shortcuts.loadPreset", json!({"name": "Reelwright Default"})).unwrap();
     assert_eq!(s.shortcuts.primary("sequence.addEdit").as_deref(), Some("Cmd+K"));
     s.execute("shortcuts.loadPreset", json!({"name": "My Keys"})).unwrap();
     assert_eq!(s.shortcuts.primary("sequence.addEdit").as_deref(), Some("Cmd+Shift+B"));
@@ -183,7 +185,7 @@ fn custom_presets_persist_export_and_import() {
     let win = dir.join("win.json");
     std::fs::write(
         &win,
-        serde_json::to_vec(&json!({"format": "filmcraft-keyboard-shortcuts", "version": 1, "name": "From Windows", "platform": "windows",
+        serde_json::to_vec(&json!({"format": "reelwright-keyboard-shortcuts", "version": 1, "name": "From Windows", "platform": "windows",
             "bindings": [{"command": "edit.undo", "keys": "Ctrl+Z"}, {"command": "sequence.addEdit", "keys": "Ctrl+Alt+K"}, {"command": "no.such", "keys": "K"}]}))
         .unwrap(),
     )
@@ -194,7 +196,7 @@ fn custom_presets_persist_export_and_import() {
     assert_eq!(s.shortcuts.primary("sequence.addEdit").as_deref(), Some("Cmd+Alt+K"));
     assert_eq!(s.shortcuts.bindings.len(), 2, "unknown commands dropped");
     s.execute("shortcuts.deletePreset", json!({"name": "My Keys"})).unwrap();
-    assert!(s.execute("shortcuts.deletePreset", json!({"name": "FilmCraft Default"})).is_err());
+    assert!(s.execute("shortcuts.deletePreset", json!({"name": "Reelwright Default"})).is_err());
     assert_eq!(s.execute("shortcuts.presets", json!({})).unwrap()["custom"], json!(["From Windows"]));
     let _ = std::fs::remove_dir_all(&dir);
 }

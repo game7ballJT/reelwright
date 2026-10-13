@@ -6,11 +6,11 @@
 //! and rasterises it into a small premultiplied linear-light RGBA [`Overlay`] positioned in the
 //! frame. Renderers composite overlays over the finished picture.
 
-use filmcraft_color::srgb_to_linear;
-use filmcraft_project::{Caption, CaptionAlign, CaptionAnchor, CaptionStyle, CaptionTrack, Sequence};
-use filmcraft_time::Tick;
+use reelwright_color::srgb_to_linear;
+use reelwright_project::{Caption, CaptionAlign, CaptionAnchor, CaptionStyle, CaptionTrack, Sequence};
+use reelwright_time::Tick;
 
-use filmcraft_text::{ParagraphStyle, TextStyle, layout, render};
+use reelwright_text::{ParagraphStyle, TextStyle, layout, render};
 
 /// A rendered caption: premultiplied linear-light RGBA f32 pixels at `(x, y)` in the frame.
 #[derive(Clone, Debug, PartialEq)]
@@ -55,7 +55,7 @@ fn caption_style(px: f32) -> TextStyle {
 }
 
 fn measure(text: &str, px: f32) -> f32 {
-    filmcraft_text::measure(text, &caption_style(px))
+    reelwright_text::measure(text, &caption_style(px))
 }
 
 fn lin(c: [u8; 4]) -> [f32; 4] {
@@ -124,7 +124,7 @@ pub fn render_caption(c: &Caption, style: &CaptionStyle, w: usize, h: usize) -> 
     if lines.is_empty() {
         return None;
     }
-    let vm = filmcraft_text::fonts::face(filmcraft_text::resolve("Inter", "SemiBold").face).metrics(px);
+    let vm = reelwright_text::fonts::face(reelwright_text::resolve("Inter", "SemiBold").face).metrics(px);
     let (asc, desc) = (vm.ascent, vm.descent);
     let lh = px * style.line_spacing.max(0.8);
     let pad_x = (px * 0.3).round();
@@ -177,7 +177,7 @@ pub fn render_caption(c: &Caption, style: &CaptionStyle, w: usize, h: usize) -> 
         }
         let baseline = lt + (lh - (asc + desc)) / 2.0 + asc;
         let l = layout(line, &caption_style(px), &ParagraphStyle::default());
-        let mut m = filmcraft_text::Mask { w: ow, h: oh, a: std::mem::take(&mut cover) };
+        let mut m = reelwright_text::Mask { w: ow, h: oh, a: std::mem::take(&mut cover) };
         render::draw(&l, &render::at(xs[i], baseline.round()), &mut m, (ox, oy));
         cover = m.a;
     }
@@ -248,7 +248,7 @@ pub fn sequence_overlays(seq: &Sequence, t: Tick, w: usize, h: usize) -> Vec<Ove
 #[cfg(test)]
 mod tests {
     use super::*;
-    use filmcraft_project::{CaptionFormat, ClipId, TrackId};
+    use reelwright_project::{CaptionFormat, ClipId, TrackId};
 
     fn cap(text: &str) -> Caption {
         Caption { id: ClipId(1), start: Tick(0), duration: Tick(100), text: text.into(), speaker: None, cue_id: None, settings: String::new() }

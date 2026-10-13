@@ -2,11 +2,11 @@
 
 ```sh
 cargo test --workspace                          # everything; oracle tests skip without ffmpeg
-cargo test -p filmcraft-h264                    # one crate
-cargo test --release -p filmcraft-hevc          # codec tests are much faster in release
+cargo test -p reelwright-h264                    # one crate
+cargo test --release -p reelwright-hevc          # codec tests are much faster in release
 cargo xtask ci                                  # all gates (fmt, clippy, tests, layers, assets, wasm)
 cargo xtask fixtures                            # pre-generate the ffmpeg fixture matrix
-FILMCRAFT_REQUIRE_ORACLES=1 cargo test --workspace   # CI: missing ffmpeg fails instead of skipping
+REELWRIGHT_REQUIRE_ORACLES=1 cargo test --workspace   # CI: missing ffmpeg fails instead of skipping
 ```
 
 ## 1. Kinds of tests
@@ -17,14 +17,14 @@ FILMCRAFT_REQUIRE_ORACLES=1 cargo test --workspace   # CI: missing ffmpeg fails 
 | Property (`proptest`) | `time`, `bitstream`, `edit`, `isobmff/tests/roundtrip.rs`, `interchange/tests/*` | tick↔frame round trips for every rate, DF timecode, edit invariants (no overlaps, durations conserved), mux→demux round trips, interchange export→import |
 | Synthetic streams | `h264/src/synth_tests.rs`, `hevc/src/synth_tests.rs` | hand-built bitstreams for features the reference encoders don't emit; expected output known exactly |
 | Scripted UI | `crates/ui-egui/tests/scripted.rs` | headless app (egui_kittest) driven over the control channel: razor/undo, insert, apply effect, playback, click by automation id (§4) |
-| Monitor view / Graphics menu | `crates/ui-egui/tests/view_ui.rs`, `crates/engine/src/graphics_tests.rs` | View menu items and checkmarks, playback/paused resolution, channel / comparison / multi-camera / waveform display modes, magnification and Hand-tool panning, guides dragged from the rulers (move, lock, remove, Add Guide…, templates in the preferences), snapping a graphic to the frame centre and a guide; align to frame / as group / to selection, distribute (centres and gaps), arrange, select next/previous graphic and layer, reset parameters / duration, vertical text, New Layer from file (`FILMCRAFT_UI_SHOTS=<dir>` writes `view-*.png`) |
-| Settings | `crates/engine/src/settings_tests.rs`, `crates/ui-egui/tests/settings_ui.rs` | schema keys and defaults, persistence in the data directory, v1 → v2 migration and repair of bad values, validation, per-category reset; each wired setting (still / transition durations, step many, label defaults and colours, media scaling, timebase, recent projects, media cache policy, output mapping, smart quotes, auto-transcribe); the dialog: every category from its command and Cmd+,, edits by automation id, OK / Cancel / Escape / Reset…, theme, label names in Edit ▸ Label, tooltips, frame cache (`FILMCRAFT_UI_SHOTS=<dir>` writes `settings-*.png`) |
-| Scopes and panels (M8.9 / M12.6) | `crates/scopes/src/tests.rs`, `crates/engine/src/{scopes,panels}_tests.rs`, `crates/ui-egui/tests/panels_ui.rs` | scope maths on generated frames (flat colours → exact histogram bins, ramps → waveform row = code value, 75 % bars → parade levels and vectorscope target cells for BT.601/709/2020, HLS hue angles, YC chroma, Clamp Signal, decimation, NaN); `scopes.read` on a colour matte (exact bins, 78.43 %) and on Bars and Tone (the six targets); metadata edits (one undo step, read-only fields refused, saved in the project), the event log (failed / disabled commands, repeats, jobs started / finished / failed / cancelled); every panel from Window ▸, the scopes' wrench menu, presets, five-scope grid, typing into a Metadata field, Timecode rows and modes, Events filter / Clear All, Progress cancel, Reference Monitor park / gang / scopes (`FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` writes `panels-*.png`); `perf_scopes_at_1080p` (ignored) times each scope |
+| Monitor view / Graphics menu | `crates/ui-egui/tests/view_ui.rs`, `crates/engine/src/graphics_tests.rs` | View menu items and checkmarks, playback/paused resolution, channel / comparison / multi-camera / waveform display modes, magnification and Hand-tool panning, guides dragged from the rulers (move, lock, remove, Add Guide…, templates in the preferences), snapping a graphic to the frame centre and a guide; align to frame / as group / to selection, distribute (centres and gaps), arrange, select next/previous graphic and layer, reset parameters / duration, vertical text, New Layer from file (`REELWRIGHT_UI_SHOTS=<dir>` writes `view-*.png`) |
+| Settings | `crates/engine/src/settings_tests.rs`, `crates/ui-egui/tests/settings_ui.rs` | schema keys and defaults, persistence in the data directory, v1 → v2 migration and repair of bad values, validation, per-category reset; each wired setting (still / transition durations, step many, label defaults and colours, media scaling, timebase, recent projects, media cache policy, output mapping, smart quotes, auto-transcribe); the dialog: every category from its command and Cmd+,, edits by automation id, OK / Cancel / Escape / Reset…, theme, label names in Edit ▸ Label, tooltips, frame cache (`REELWRIGHT_UI_SHOTS=<dir>` writes `settings-*.png`) |
+| Scopes and panels (M8.9 / M12.6) | `crates/scopes/src/tests.rs`, `crates/engine/src/{scopes,panels}_tests.rs`, `crates/ui-egui/tests/panels_ui.rs` | scope maths on generated frames (flat colours → exact histogram bins, ramps → waveform row = code value, 75 % bars → parade levels and vectorscope target cells for BT.601/709/2020, HLS hue angles, YC chroma, Clamp Signal, decimation, NaN); `scopes.read` on a colour matte (exact bins, 78.43 %) and on Bars and Tone (the six targets); metadata edits (one undo step, read-only fields refused, saved in the project), the event log (failed / disabled commands, repeats, jobs started / finished / failed / cancelled); every panel from Window ▸, the scopes' wrench menu, presets, five-scope grid, typing into a Metadata field, Timecode rows and modes, Events filter / Clear All, Progress cancel, Reference Monitor park / gang / scopes (`REELWRIGHT_UI_SNAPSHOT_DIR=<dir>` writes `panels-*.png`); `perf_scopes_at_1080p` (ignored) times each scope |
 | Golden images | `crates/golden/tests/golden.rs` | CPU renders vs committed PNGs; GPU vs CPU on the same scenes (§3) |
 | Engine / command | `crates/engine/src/tests.rs` | run commands on the demo project, assert the sequence, undo/redo, disabled cases |
 | Render | `crates/render/src/tests.rs` | compositing, opacity, Motion, cross dissolve midpoint, ½-res vs full, GPU plan vs reference, audio mix, audio-effect continuity |
 | Multi-camera / sync | `crates/audio-dsp/src/sync.rs`, `crates/engine/src/multicam_tests.rs`, `crates/ui-egui/tests/multicam_ui.rs` | audio offsets within one sample: Rust-generated multi-mic speech (gains −20…+10 dB, SNR 40/25/10/3 dB, zero-phase colouring, fractional delays, a 0 dB-SNR room with a −4 dB echo) and ffmpeg-made camera/recorder files (pink-noise bursts, independent noise; exact lags recovered); timecode (± hours) and marker sync within a frame; Merge Clips; timeline Synchronize keeps frame-aligned starts; multicam structure, angle render (PSNR vs the camera), Switch Audio mix = the angle's track, live switching from a simulated playback clock (cuts, healing, one undo step), Ctrl+N cuts, flatten (frames identical), save/load; 20 angles: paging (auto / 2×2 / 3×3), page-relative keys, absolute cameras beyond 16, a page decoding only its angles at the cell scale (recording source), Auto-Adjust scale, Selection Top Down; headless: page arrows, angle 17–20 cells, grid-only view, Edit Cameras thumbnails; `perf_grid_of_four_1080p_angles` (ignored) prints the grid cost |
-| Project panel and Media Browser (M12.7) | `crates/engine/src/{project_panel,media_browser}_tests.rs`, `crates/ui-egui/tests/project_panel_ui.rs` | view settings and their preference round trip; Metadata Display columns (custom fields, Freeform keys hidden), numeric vs text sorting, view presets (save / save as / restore / rename / delete, ten slots, persisted in `preferences.json`); Freeform moves keeping offsets, snapping, Align to Grid, Clip Size, stacks, arrangements, Reset (each one undo step, saved in the project); bin rename / nesting; the Media Browser against a fake filesystem (folders first, hidden and unsupported files left out, file-type filter, back / forward / up, recent directories, Favorites, import of a selection or a folder, Open in Source Monitor, ingest, probe columns). Headless: List view (sort by header, drag a column wider, inline rename), Icon view (hover scrub + I / O set the clip's In / Out, Shift+] / [), Freeform (drag a card, stack from the card menu, options dialog), panel menu, Metadata Display dialog, view presets, bins in place / tab / window, footer buttons, Media Browser navigation, Favorites, import, Shift+O, Edit Columns…, thumbnails, drag to the Timeline (`FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` writes `project-*.png`, `media-browser-*.png`) |
+| Project panel and Media Browser (M12.7) | `crates/engine/src/{project_panel,media_browser}_tests.rs`, `crates/ui-egui/tests/project_panel_ui.rs` | view settings and their preference round trip; Metadata Display columns (custom fields, Freeform keys hidden), numeric vs text sorting, view presets (save / save as / restore / rename / delete, ten slots, persisted in `preferences.json`); Freeform moves keeping offsets, snapping, Align to Grid, Clip Size, stacks, arrangements, Reset (each one undo step, saved in the project); bin rename / nesting; the Media Browser against a fake filesystem (folders first, hidden and unsupported files left out, file-type filter, back / forward / up, recent directories, Favorites, import of a selection or a folder, Open in Source Monitor, ingest, probe columns). Headless: List view (sort by header, drag a column wider, inline rename), Icon view (hover scrub + I / O set the clip's In / Out, Shift+] / [), Freeform (drag a card, stack from the card menu, options dialog), panel menu, Metadata Display dialog, view presets, bins in place / tab / window, footer buttons, Media Browser navigation, Favorites, import, Shift+O, Edit Columns…, thumbnails, drag to the Timeline (`REELWRIGHT_UI_SNAPSHOT_DIR=<dir>` writes `project-*.png`, `media-browser-*.png`) |
 | Menu long tail (M3.11) | `crates/render/src/scene.rs`, `crates/engine/src/{scene_detect,sequence_extras,project_tools}_tests.rs`, `crates/interchange/src/ale.rs`, `crates/project/src/find.rs`, `crates/ui-egui/tests/menus_ui.rs` | Scene Edit Detection on synthetic frames (hard cuts vs pans, flashes, sensitivity) and on generated movies with known cut points (our own ProRes render of demo scenes; an ffmpeg-made H.264 concat of testsrc2 / SMPTE bars / Mandelbrot): cuts with linked audio, clip markers, subclips, one undo step, background job and cancel; Normalize Mix Track to a target peak; Simplify Sequence; Find / Find Next and search bins; Automate to Sequence (overlap, transitions, insert, unnumbered markers); ALE round trip; Project Settings and scratch disks; menu order and shortcuts against Premiere's; the dialogs by automation id |
 | Mixer | `crates/render/src/mixer_tests.rs`, `crates/engine/src/mixer_tests.rs` | sample-exact fader gain and pan laws, automation at block boundaries (bit-identical however requests are cut), solo/mute/solo-safe, sends and submix routing, latency-compensation alignment, render-vs-playback identity, Touch ramp-back, recorder modes (Latch/Touch/Write), thinning, Audio Gain, transition curves; `perf_24_tracks_3_effects_realtime_factor` prints the realtime factor |
 | 5.1 / multichannel | `crates/audio-dsp/src/channels.rs`, `crates/render/src/mixer_tests.rs`, `crates/export/src/surround_tests.rs`, `crates/engine/src/mixer_tests.rs`, `crates/ui-egui/tests/audio51_ui.rs` | BS.775 downmix / upmix coefficients exact, mixdown types; 5.1 panner point gains equal-power (Σg² = 1 over a 21×21 grid × 3 centre settings), speaker positions exact, 5.1 through the default puck bit-exact identity; graph: stereo/mono tracks into a 5.1 Mix (L/R, C, rear right, room centre −6 dB each, LFE = mean), 5.1 track through a 5.1 Mix and folded into stereo, a 5.1 submix, `pan51` automation block-invariant, six-channel meters; export: 6-ch WAV (`WAVE_FORMAT_EXTENSIBLE`, mask 0x3F) and ProRes MOV (6 × 24-bit PCM) decoded by ffmpeg **sample-exact**, ffprobe `channels` 6 / `channel_layout` 5.1; AAC 5.1 in MP4: every decoded channel's own tone ≥ 30 dB above the others' (no swapped channels), stereo export of a 5.1 Mix = BS.775 within 2·10⁻⁶; `sequence.settings {mix}`, `file.newSequence {mix, trackType}`, panner lanes, Write pass records the puck; UI: puck drag (one undo step), Center / LFE, six meter bars |
@@ -42,16 +42,16 @@ Commit `*.proptest-regressions` files so failing cases are re-run.
 ffmpeg and ffprobe are **external processes** used to generate fixtures and to check results. They
 are never linked or shipped ([AGENTS.md](../AGENTS.md) §2).
 
-- The tools are found by `filmcraft-testkit` (a dev-dependency-only crate, `crates/testkit`), in
-  this order: `FILMCRAFT_FFMPEG` / `FILMCRAFT_FFPROBE` (explicit paths; a wrong path is an error),
+- The tools are found by `reelwright-testkit` (a dev-dependency-only crate, `crates/testkit`), in
+  this order: `REELWRIGHT_FFMPEG` / `REELWRIGHT_FFPROBE` (explicit paths; a wrong path is an error),
   then every directory on `PATH` (`ffmpeg` and `ffmpeg.exe`), then well-known install directories
   (`/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, `C:\ffmpeg\bin`, …).
 - If a tool is missing the test prints `SKIPPED (<test>): ffmpeg not found …` and passes. Set
-  **`FILMCRAFT_REQUIRE_ORACLES=1`** (CI) to make every such skip a failure. In new tests use
-  `let ff = filmcraft_testkit::require_ffmpeg!();` (also `require_ffprobe!`, `require_oracles!`).
+  **`REELWRIGHT_REQUIRE_ORACLES=1`** (CI) to make every such skip a failure. In new tests use
+  `let ff = reelwright_testkit::require_ffmpeg!();` (also `require_ffprobe!`, `require_oracles!`).
 - Fixtures are generated on first use into `<workspace>/target/fixtures/<crate>/`
-  (`filmcraft_testkit::fixtures_dir`; independent of `CARGO_TARGET_DIR`, so agents with private
-  target dirs share them; `FILMCRAFT_FIXTURES_DIR` overrides the root) and reused afterwards.
+  (`reelwright_testkit::fixtures_dir`; independent of `CARGO_TARGET_DIR`, so agents with private
+  target dirs share them; `REELWRIGHT_FIXTURES_DIR` overrides the root) and reused afterwards.
   Generators write to a per-process/thread temporary name (`testkit::temp_path`) and rename it into
   place, so concurrent tests never see half-written files. Delete the directory to regenerate.
   Never commit media.
@@ -108,7 +108,7 @@ Each codec README has the full fixture matrix and the measured results.
 
 ## 3. Rendering: CPU reference and GPU parity
 
-- The CPU compositor in `filmcraft-render` is the reference. Its tests check computed values
+- The CPU compositor in `reelwright-render` is the reference. Its tests check computed values
   (opacity blends, dissolve midpoints, Motion placement, ½-resolution against downsampled full
   resolution) and that `render::plan` matches `render_sequence`.
 - `crates/gpu/src/tests.rs` composites the same frame plan (a YUV layer plus a transformed,
@@ -125,7 +125,7 @@ Each codec README has the full fixture matrix and the measured results.
   management: S-Log3/S-Gamut3.Cine footage interpreted into Rec. 709 (`log_to_rec709`) and
   Rec. 2100 PQ footage tone mapped into Rec. 709 (`hdr_tone_map`; the footage is demo frames
   re-encoded by the test's `Encoded` source). Each frame is compared
-  with `crates/golden/goldens/<scene>.png` by `filmcraft_testkit::golden`:
+  with `crates/golden/goldens/<scene>.png` by `reelwright_testkit::golden`:
   **PSNR ≥ 45 dB, max abs ≤ 12, 99th-percentile per-pixel max channel difference ≤ 2** (8-bit
   sRGB levels; `Tolerance::RENDER`). On failure the actual frame and a ×8 difference image go to
   `<workspace>/target/golden-failures/`. Six `vfx_*` scenes cover the M5.11 effects (Corner Pin over Turbulent
@@ -140,12 +140,12 @@ Each codec README has the full fixture matrix and the measured results.
   from both, the output is finite and deterministic (also on 1×1 / odd sizes and NaN progress), every
   parameter visibly changes the picture, and every direction differs. Golden *fingerprints* (4×4 mean
   RGB grid at p = 0.25/0.5/0.75, ±4 levels) live in `src/transitions/goldens.txt`; re-bless with
-  `FILMCRAFT_BLESS=1 cargo test -p filmcraft-render golden_fingerprints` and review the diff.
-  `FILMCRAFT_TRANSITION_SHEETS=<dir> cargo test -p filmcraft-render contact_sheets -- --ignored`
+  `REELWRIGHT_BLESS=1 cargo test -p reelwright-render golden_fingerprints` and review the diff.
+  `REELWRIGHT_TRANSITION_SHEETS=<dir> cargo test -p reelwright-render contact_sheets -- --ignored`
   writes one contact-sheet PNG per folder for eyeballing (never commit them).
-- **Blessing:** `FILMCRAFT_BLESS=1 cargo test -p filmcraft-golden` rewrites the references (and
+- **Blessing:** `REELWRIGHT_BLESS=1 cargo test -p reelwright-golden` rewrites the references (and
   writes a `.attribution` sidecar for any new one; it prints the `ATTRIBUTION.md` row to add).
-  References are original work rendered by FilmCraft, must stay under 50 KB (enforced on bless),
+  References are original work rendered by Reelwright, must stay under 50 KB (enforced on bless),
   and every one needs its sidecar and index row (`cargo xtask assets`). Look at a re-blessed PNG
   before committing it.
 - The same scenes run through `plan_frame` + `GpuCompositor` when a GPU adapter exists
@@ -158,7 +158,7 @@ Each codec README has the full fixture matrix and the measured results.
 
 ### Scripted UI tests (headless)
 
-`crates/ui-egui/tests/scripted.rs` runs the real `FilmcraftApp` under
+`crates/ui-egui/tests/scripted.rs` runs the real `ReelwrightApp` under
 [`egui_kittest`](https://docs.rs/egui_kittest) (`build_eframe`): no window, no GPU, no OS event loop.
 A small `Driver` opens the demo project, sends requests through the same control channel agents use
 (`ControlRequest` → `control::handle`, exactly as the TCP server does) and steps egui frames until
@@ -177,7 +177,7 @@ next frame by the app's own `raw_input_hook`, so clicks by automation id work he
 
 `crates/ui-egui/tests/mixer_ui.rs` drives the Audio Track Mixer, Audio Clip Mixer, timeline track
 keyframes and the Audio Gain dialog by automation id and with multi-frame pointer drags (press, move
-over several frames, release). With `FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` it also renders the window
+over several frames, release). With `REELWRIGHT_UI_SNAPSHOT_DIR=<dir>` it also renders the window
 offscreen through wgpu (`Harness::render`) and writes `mixer-*.png`; this works without a visible
 window (for example on a locked screen, where `ui.screenshot` cannot capture).
 `crates/ui-egui/tests/essential_sound_ui.rs` does the same for the Essential Sound panel (type buttons,
@@ -202,9 +202,9 @@ the Export button and the header's Quick Export popup (`export-*.png` snapshots)
 Lumetri Input/Look LUT menus and section switches, the Interpret Footage ▸ Color Management and
 Sequence Color Management dialogs, and the HDR scopes of a PQ sequence.
 
-Colour science tests: `filmcraft-color` (curve round trips and published reference values per
+Colour science tests: `reelwright-color` (curve round trips and published reference values per
 camera log curve, BT.709/BT.2087 matrices, BT.2390 EETF, gamut mapping, LUT tetrahedral vs a
-brute-force barycentric reference, `.cube`/`.3dl` round trips), `filmcraft-gpu`
+brute-force barycentric reference, `.cube`/`.3dl` round trips), `reelwright-gpu`
 (`gpu_lut_matches_cpu_tetrahedral`: WGSL vs CPU, max |Δ| ≈ 2e-7), `render::colorman`,
 `render::color_match`, engine `color_tests.rs`, and `export::tests::hdr_exports_signal_pq_and_hlg`
 (PQ/HLG exports read back by our demuxer and by ffprobe: `color_transfer`, `color_primaries`,
@@ -214,7 +214,7 @@ Not covered headless: `ui.screenshot` (needs a real viewport), the wgpu monitor 
 runs the CPU texture path), audio output, and wall-clock playback advance (kittest frames do not
 advance real time). Playing sound is covered without a device: `play_ahead` tests drive the
 mixed-ahead ring with a wall-clock device (order, underruns stay in time, mixer panic, stop), and
-`cargo run --release -p filmcraft-ui-egui --example bench_audio -- <project.fcproj>` plays a real
+`cargo run --release -p reelwright-ui-egui --example bench_audio -- <project.fcproj>` plays a real
 project's sequences through a simulated 48 kHz device and counts dropouts, mixing in the callback
 (`direct`, as before) against mixing ahead (`ahead`). Use `Driver` for new UI regressions: `d.exec(command, params)`,
 `d.ok(method, params)`, `d.frames(n)`.
@@ -224,25 +224,25 @@ project's sequences through a simulated 48 kHz device and counts dropouts, mixin
 For visual work, drive the real app:
 
 ```sh
-cargo run --release -p filmcraft -- --control 9876
+cargo run --release -p reelwright -- --control 9876
 ```
 
 Then script it over the control channel or MCP: run commands, click by automation id,
 `ui.inspect` / `ui.elements` to assert state, and `ui.screenshot {"path": "…"}` to capture the window
 or a single panel (`{"panel": "Timeline"}`). Look at every screenshot. Examples are in
-[agents.md](agents.md). The headless path (`filmcraft-cli run script.jsonl`, MCP `--demo`) covers
+[agents.md](agents.md). The headless path (`reelwright-cli run script.jsonl`, MCP `--demo`) covers
 engine behaviour without a window.
 
 ## 5. Performance
 
 | Benchmark | Command |
 |---|---|
-| H.264 decode, 1080p, threads sweep | `cargo test --release -p filmcraft-h264 --test perf -- --ignored --nocapture` |
-| HEVC decode, 1080p / 2160p | `cargo test --release -p filmcraft-hevc --test perf -- --ignored --nocapture` |
-| ProRes decode/encode | `cargo test --release -p filmcraft-prores --test perf -- --ignored --nocapture` |
-| Encoder speed / PSNR / bitrate | `cargo run --release -p filmcraft-h264enc --example h264enc_synth -- …` |
-| Decode a real file through the media stack | `cargo run --release -p filmcraft-cli -- bench-decode file.mp4 --frames 120` |
-| Coding-tool coverage of the fixtures | `cargo test --release -p filmcraft-h264 --test conformance coverage_report -- --ignored --nocapture` (same for `hevc`) |
+| H.264 decode, 1080p, threads sweep | `cargo test --release -p reelwright-h264 --test perf -- --ignored --nocapture` |
+| HEVC decode, 1080p / 2160p | `cargo test --release -p reelwright-hevc --test perf -- --ignored --nocapture` |
+| ProRes decode/encode | `cargo test --release -p reelwright-prores --test perf -- --ignored --nocapture` |
+| Encoder speed / PSNR / bitrate | `cargo run --release -p reelwright-h264enc --example h264enc_synth -- …` |
+| Decode a real file through the media stack | `cargo run --release -p reelwright-cli -- bench-decode file.mp4 --frames 120` |
+| Coding-tool coverage of the fixtures | `cargo test --release -p reelwright-h264 --test conformance coverage_report -- --ignored --nocapture` (same for `hevc`) |
 | **Whole-app suite**: decode fps per codec, playback, scrubbing, timeline UI, export, project save/open, peak RSS | `cargo xtask bench` ([performance.md](performance.md)) |
 
 `cargo xtask bench` (the example `crates/ui-egui/examples/bench/`) runs six sections, each in its
@@ -254,7 +254,7 @@ wgpu render ms per frame), `export` (H.264 + AAC and ProRes) and `project` (save
 Options: `--sections decode,scrub`, `--only <substring>` (fixture or scenario), `--repeat N`,
 `--quick`, `--cpu`, `--hw auto|off` (Settings ▸ Playback ▸ Hardware decoding; default `auto`, as the app), `--label NAME` (output `target/bench/bench-<label>.{json,md}`),
 `--section NAME --json FILE` (one section in-process, e.g. under a profiler). Fixtures are made
-with ffmpeg in `target/fixtures/playback/` (or `$FILMCRAFT_FIXTURES/playback`). The suite's
+with ffmpeg in `target/fixtures/playback/` (or `$REELWRIGHT_FIXTURES/playback`). The suite's
 `playback` section plays `h264-1080`, `stack3` and `stack3-blend` at Full, `h264-2160` at Full, 1/2 and 1/4 and with
 draft decoding (Settings ▸ Playback ▸ Draft decoding) at 1/2 and 1/4, and `hevc-2160`, `vp9-2160`
 and `av1-2160` at Full, 1/2 and 1/2 draft; its `draft` column counts the frames decoded in draft
@@ -270,7 +270,7 @@ performance table, with machine and thread count. Headline numbers go in
 sequences headlessly through the Program monitor's own frame scheduler: the `FrameServer` worker
 pool, `schedule_playback` (prefetch order and stale-job dropping), its caches, and the
 `PlaybackMeter` that counts shown/dropped frames in the app. On the GPU path it also composites
-each plan with `filmcraft-gpu`, as the monitor does on the UI thread.
+each plan with `reelwright-gpu`, as the monitor does on the UI thread.
 
 ```sh
 cargo xtask bench-playback                                   # every scenario, GPU path, Full and Half
@@ -290,7 +290,7 @@ cargo xtask bench-playback --json target/bench-playback.json # machine-readable 
 
 Options: `--res full,half,quarter`, `--cpu` (CPU compositor + texture conversion instead of the
 GPU path), `--seconds`, `--refresh` (display Hz), `--workers`, `--repeat`, `--json <file>`.
-Fixtures are made with ffmpeg in `target/fixtures/playback/` (set `FILMCRAFT_FIXTURES` to share one
+Fixtures are made with ffmpeg in `target/fixtures/playback/` (set `REELWRIGHT_FIXTURES` to share one
 set between worktrees).
 
 Columns: **shown/drop** as counted in the app (a frame is shown when its exact picture was on

@@ -1,16 +1,13 @@
-# Builds FilmCraft on FreeBSD, inside a FreeBSD VM on a Linux runner (GitHub has no FreeBSD
+# Builds Reelwright on FreeBSD, inside a FreeBSD VM on a Linux runner (GitHub has no FreeBSD
 # runners), then runs packaging/freebsd/package.sh, the script the release job runs, and checks
 # the tarball. A broken FreeBSD build or package fails here before it can fail a release. Nothing
 # is uploaded and no secrets are used. (The test suite isn't run here yet: the ffmpeg-oracle and
 # golden-image tests need tools and a GPU the VM doesn't have.)
 name: FreeBSD
 
-# The VM build takes an hour or more, so it runs nightly on main rather than on every push or
-# dependency change: a drifted dependency still shows up within a day. PRs that change the
-# FreeBSD packaging itself still run it.
+# The VM build takes an hour or more, so it runs only for PRs that change the FreeBSD packaging
+# itself, or when started by hand.
 on:
-  schedule:
-    - cron: "37 2 * * *"
   pull_request:
     paths:
       - .github/workflows/freebsd.yml
@@ -52,7 +49,7 @@ jobs:
             . "$HOME/.cargo/env"
             git config --global --add safe.directory "*"
             rustc --version
-            export CARGO_TARGET_DIR=/var/tmp/filmcraft-target CARGO_BUILD_JOBS=4
+            export CARGO_TARGET_DIR=/var/tmp/reelwright-target CARGO_BUILD_JOBS=4
             bash packaging/freebsd/package.sh
-            tar -tzf dist/release/filmcraft-*-freebsd-x86_64.tar.gz \
-              | grep -E '/bin/filmcraft$|/bin/filmcraft-cli$|/share/applications/ai\.storyteller\.filmcraft\.desktop$|/share/doc/filmcraft/LICENSE-MIT$'
+            tar -tzf dist/release/reelwright-*-freebsd-x86_64.tar.gz \
+              | grep -E '/bin/reelwright$|/bin/reelwright-cli$|/share/applications/online\.jonmcgee\.reelwright\.desktop$|/share/doc/reelwright/LICENSE-MIT$'

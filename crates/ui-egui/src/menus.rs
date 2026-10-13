@@ -4,7 +4,7 @@
 
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::dock::PanelKind;
 use crate::state::{Mode, Tool};
 
@@ -119,14 +119,13 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     uic!("mode.import", "Import", [], None),
     uic!("mode.edit", "Edit", [], None),
     uic!("mode.export", "Export", ["File", "Export"], Some("Cmd+M")),
-    uic!("help.discord", "Join the ArtCraft Discord…", ["Help"], None),
-    uic!("help.website", "ArtCraft Website", ["Help"], None),
-    uic!("help.appPage", "FilmCraft on getartcraft.com", ["Help"], None),
-    uic!("help.github", "FilmCraft on GitHub", ["Help"], None),
+    uic!("help.website", "Reelwright Website", ["Help"], None),
+    uic!("help.github", "Reelwright on GitHub", ["Help"], None),
+    uic!("help.upstream", "Based on FilmCraft…", ["Help"], None),
     uic!("help.reportIssue", "Report an Issue…", ["Help"], None),
     uic!("help.revealLogFiles", "Reveal Log Files…", ["Help"], None),
     uic!("help.systemCompatibilityReport", "System Compatibility Report…", ["Help"], None),
-    uic!("app.about", "About FilmCraft", ["Help"], None),
+    uic!("app.about", "About Reelwright", ["Help"], None),
     uic!("app.keyboardShortcuts", "Keyboard Shortcuts…", ["Edit"], Some("Cmd+Alt+K")),
     uic!("app.settings.general", "General…", ["Edit", "Preferences"], Some("Cmd+,")),
     uic!("app.settings.appearance", "Appearance…", ["Edit", "Preferences"], None),
@@ -151,7 +150,7 @@ pub fn panel_command_id(p: PanelKind) -> String {
 }
 
 /// Execute a UI or engine command by id.
-pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+pub fn invoke(app: &mut ReelwrightApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
     if matches!(id, "app.language.english" | "app.language.japanese" | "app.language.spanish" | "app.language.portuguese") {
         // Japanese needs the craft-fonts (built with CRAFT_FONTS_DIR) or a font installed on the system
         if id == "app.language.japanese" && !crate::i18n::install_japanese_font(ctx) {
@@ -307,12 +306,12 @@ pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Val
         }
         // File ▸ Export ▸ AAF… / OMF… open their settings dialogs; with a path they export directly.
         "file.exportAaf" | "file.exportOmf" if params.get("path").is_none() => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             return crate::panels::interchange_export::open(app, ctx, id);
         }
         // Audio Gain from the menu or G opens the dialog; with params it applies directly.
         "clip.audioGain" if params.as_object().is_none_or(|m| m.is_empty()) => {
-            filmcraft_engine::find_command("clip.audioGain").map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command("clip.audioGain").map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             if app.ui.audio_gain.mode.is_empty() {
                 app.ui.audio_gain.mode = "adjust".into();
             }
@@ -321,21 +320,21 @@ pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Val
         }
         // Colour dialogs from the menus; with params the engine command applies directly.
         "clip.interpretFootage" if params.get("colorSpace").is_none() => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             crate::panels::color_dialogs::open_interpret(app, &params);
             return Ok(json!({"dialog": "interpretFootage"}));
         }
         // Remix Properties… from the menu opens the dialog; with params it applies directly.
         "clip.remix.properties" if params.as_object().is_none_or(|m| m.is_empty()) => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             return crate::panels::remix::open(app, ctx);
         }
         // Add Tracks… from the menu opens the dialog (new tracks after the last ones, as Premiere
         // offers); with params it adds the tracks directly.
         "sequence.addTracks" if params.as_object().is_none_or(|m| m.is_empty()) => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             let seq = app.session.active_sequence();
-            let count = |f: fn(&filmcraft_engine::project::Sequence) -> usize| seq.map_or(0, f);
+            let count = |f: fn(&reelwright_engine::project::Sequence) -> usize| seq.map_or(0, f);
             app.ui.add_tracks = crate::state::AddTracksDraft {
                 video_after: count(|q| q.video_tracks.len()),
                 audio_after: count(|q| q.audio_tracks.len()),
@@ -346,13 +345,13 @@ pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Val
             return Ok(json!({"dialog": "addTracks"}));
         }
         "sequence.deleteTracks" if params.as_object().is_none_or(|m| m.is_empty()) => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             app.ui.delete_tracks = Default::default();
             app.dialog = Some(crate::Dialog::DeleteTracks);
             return Ok(json!({"dialog": "deleteTracks"}));
         }
         "sequence.colorSettings" if params.as_object().is_none_or(|m| m.is_empty()) => {
-            filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
+            reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))?;
             crate::panels::color_dialogs::open_sequence(app);
             return Ok(json!({"dialog": "sequenceColor"}));
         }
@@ -386,7 +385,7 @@ pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Val
         || (id == "file.saveCopy" && params.get("path").is_none())
         || (id == "file.open" && params.get("path").is_none())
         || (id == "file.save" && params.get("path").is_none() && app.session.path.is_none())
-        || (matches!(id, "captions.import" | "captions.export") && params.get("path").is_none())
+        || (matches!(id, "captions.import" | "captions.export" | "markers.exportChapters") && params.get("path").is_none())
         || (id == "graphics.newFromFile" && params.get("path").is_none())
     {
         return app.file_dialog(id, &params);
@@ -405,7 +404,7 @@ pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Val
 /// system clipboard holds text (an empty clipboard sends no paste at all, #199). Put the copied
 /// clip names there, like other editors put their own data on the clipboard, so Ctrl+V pastes the
 /// clips right after a copy.
-fn put_clip_names_on_system_clipboard(app: &FilmcraftApp, ctx: &egui::Context) {
+fn put_clip_names_on_system_clipboard(app: &ReelwrightApp, ctx: &egui::Context) {
     let names: Vec<&str> = app.session.state.clipboard.iter().map(|(_, _, c)| c.name.as_str()).collect();
     if names.is_empty() {
         return;
@@ -429,7 +428,7 @@ pub struct MenuItem {
 
 pub const MENUS: [&str; 9] = ["File", "Edit", "Clip", "Sequence", "Markers", "Graphics and Titles", "View", "Window", "Help"];
 
-pub fn menu_items(app: &FilmcraftApp) -> Vec<MenuItem> {
+pub fn menu_items(app: &ReelwrightApp) -> Vec<MenuItem> {
     let mut v = menu_items_for(&app.session);
     for it in &mut v {
         it.label = app.ui.language.tr(&it.label).to_string();
@@ -450,14 +449,14 @@ pub fn menu_items(app: &FilmcraftApp) -> Vec<MenuItem> {
 }
 
 /// Menu entries with their live shortcuts and enablement.
-pub fn menu_items_for(session: &filmcraft_engine::Session) -> Vec<MenuItem> {
+pub fn menu_items_for(session: &reelwright_engine::Session) -> Vec<MenuItem> {
     let mut out = Vec::new();
-    for c in filmcraft_engine::command_specs() {
+    for c in reelwright_engine::command_specs() {
         if c.menu.is_empty() {
             continue;
         }
         // Edit ▸ Label items carry the names from Settings ▸ Labels
-        let label = match c.id.strip_prefix("edit.label.").and_then(filmcraft_project::Label::from_name) {
+        let label = match c.id.strip_prefix("edit.label.").and_then(reelwright_project::Label::from_name) {
             Some(l) => session.prefs.labels.name(l),
             None => c.label.into(),
         };
@@ -498,7 +497,7 @@ pub fn menu_items_for(session: &filmcraft_engine::Session) -> Vec<MenuItem> {
 
 /// Shortcut text for menus in this OS's notation (`⇧⌘K` on macOS, `Ctrl+Shift+K` elsewhere).
 pub fn shortcut_text(s: &str) -> String {
-    use filmcraft_engine::shortcuts::{Chord, Platform};
+    use reelwright_engine::shortcuts::{Chord, Platform};
     Chord::parse(s).map(|c| c.display(Platform::current())).unwrap_or_else(|_| s.to_string())
 }
 
@@ -537,7 +536,7 @@ pub type KeyBinding = (egui::Modifiers, egui::Key, String, Option<String>);
 
 /// The active key bindings (from the engine's shortcut set), most specific first so Shift+I
 /// doesn't also fire I.
-pub fn bindings(app: &FilmcraftApp) -> Vec<KeyBinding> {
+pub fn bindings(app: &ReelwrightApp) -> Vec<KeyBinding> {
     let mut v: Vec<KeyBinding> =
         app.session.shortcuts.bindings.iter().filter_map(|b| parse_shortcut(&b.keys).map(|(m, k)| (m, k, b.command.clone(), b.panel.clone()))).collect();
     // With Shift held, a punctuation key arrives as its shifted glyph (Shift+; is `:` on US layouts).
@@ -565,8 +564,8 @@ fn shifted_key(k: egui::Key) -> Option<egui::Key> {
 
 /// Frontend-owned commands, registered with the engine's shortcut set so they can be listed,
 /// rebound and resolved alongside engine commands (the `shortcuts.` commands).
-pub fn external_commands() -> Vec<filmcraft_engine::shortcuts::CommandInfo> {
-    use filmcraft_engine::shortcuts::CommandInfo;
+pub fn external_commands() -> Vec<reelwright_engine::shortcuts::CommandInfo> {
+    use reelwright_engine::shortcuts::CommandInfo;
     let mut v: Vec<CommandInfo> =
         UI_COMMANDS.iter().chain(crate::panels::keyboard::COMMANDS).map(|c| CommandInfo::new(c.id, c.label, c.menu, c.shortcut)).collect();
     for p in PanelKind::ALL {
@@ -576,7 +575,7 @@ pub fn external_commands() -> Vec<filmcraft_engine::shortcuts::CommandInfo> {
 }
 
 /// Draw the in-window menu bar.
-pub fn menu_bar(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
+pub fn menu_bar(app: &mut ReelwrightApp, ui: &mut egui::Ui) {
     ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new("interface-language"), app.ui.language));
     let items = menu_items(app);
     let ctx = ui.ctx().clone();

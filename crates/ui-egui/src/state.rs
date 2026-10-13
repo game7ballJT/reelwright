@@ -260,7 +260,7 @@ impl DisplayMode {
 }
 
 /// Monitor guide (frame pixels): `vertical` = a line at x = `position`.
-pub type Guide = filmcraft_engine::autosave::Guide;
+pub type Guide = reelwright_engine::autosave::Guide;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]

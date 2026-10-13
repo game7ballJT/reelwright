@@ -6,11 +6,11 @@
 //! requested first and the nearest cached frame is shown until it arrives (no black flashes).
 
 use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
-use filmcraft_project::ItemKind;
-use filmcraft_time::{Tick, TimeDisplay, format_time};
+use reelwright_project::ItemKind;
+use reelwright_time::{Tick, TimeDisplay, format_time};
 use serde_json::json;
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::frames::{FrameKey, Target};
 use crate::icons::{self, Icon};
 use crate::panels::monitor_view;
@@ -23,7 +23,7 @@ pub enum Which {
     Program,
 }
 
-pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, which: Which) {
+pub fn show(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect, which: Which) {
     let t = app.tokens;
     let ctx = ui.ctx().clone();
     let controls_h = 28.0 + 24.0 + 36.0;
@@ -59,7 +59,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, which: Which)
                 return;
             };
             let Some(pi) = app.session.project.item(item) else { return };
-            let Some(view) = filmcraft_engine::clip_ops::source_view(&app.session, item) else { return };
+            let Some(view) = reelwright_engine::clip_ops::source_view(&app.session, item) else { return };
             // a subclip shows its parent media's frames
             let size = match app.session.project.item(view.media).map(|i| &i.kind) {
                 Some(ItemKind::Media(m)) => m.info.video.as_ref().map(|v| (v.width, v.height)).unwrap_or((0, 0)),
@@ -344,8 +344,8 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, which: Which)
 
 /// A monitor texture from the CPU frame path: the exact frame, else the nearest cached one, with
 /// the display mode's channel mapping. Returns (texture, exact).
-fn cpu_texture(app: &mut FilmcraftApp, ctx: &egui::Context, name: &str, key: FrameKey, mode: DisplayMode) -> (Option<egui::TextureId>, bool) {
-    let upload = |app: &mut FilmcraftApp, k: FrameKey, img: &crate::frames::Rgba| {
+fn cpu_texture(app: &mut ReelwrightApp, ctx: &egui::Context, name: &str, key: FrameKey, mode: DisplayMode) -> (Option<egui::TextureId>, bool) {
+    let upload = |app: &mut ReelwrightApp, k: FrameKey, img: &crate::frames::Rgba| {
         if mode.is_channel() { app.texture_for_mapped(ctx, name, k, img, |i| monitor_view::channel_view(i, mode)) } else { app.texture_for(ctx, name, k, img) }
     };
     if let Some(img) = app.frames.get(&key) {
@@ -371,14 +371,14 @@ pub fn fit(area: Rect, w: f32, h: f32) -> Rect {
 
 #[allow(clippy::too_many_arguments)]
 fn mini_timeline(
-    app: &mut FilmcraftApp,
+    app: &mut ReelwrightApp,
     ui: &mut egui::Ui,
     bar: Rect,
     which: Which,
     origin: Tick,
     time: Tick,
     end: Tick,
-    rate: filmcraft_time::FrameRate,
+    rate: reelwright_time::FrameRate,
     mark_in: Option<Tick>,
     mark_out: Option<Tick>,
 ) {
@@ -402,7 +402,7 @@ fn mini_timeline(
     // markers: the sequence's (Program), the clip's or the subclip's inherited ones (Source)
     let markers = match which {
         Which::Program => app.session.active_sequence().map(|q| q.markers.clone()),
-        Which::Source => app.session.state.source_item.and_then(|i| filmcraft_engine::clip_ops::source_view(&app.session, i)).map(|v| v.markers),
+        Which::Source => app.session.state.source_item.and_then(|i| reelwright_engine::clip_ops::source_view(&app.session, i)).map(|v| v.markers),
     };
     if let Some(markers) = markers {
         for m in &markers {
@@ -445,7 +445,7 @@ fn mini_timeline(
     }
 }
 
-fn transport(app: &mut FilmcraftApp, ui: &mut egui::Ui, row: Rect, which: Which) {
+fn transport(app: &mut ReelwrightApp, ui: &mut egui::Ui, row: Rect, which: Which) {
     let t = app.tokens;
     let src = which == Which::Source;
     let buttons: Vec<(Icon, &str, &str)> = if src {
@@ -529,9 +529,9 @@ fn transport(app: &mut FilmcraftApp, ui: &mut egui::Ui, row: Rect, which: Which)
     icons::paint(ui.painter(), r.shrink(5.0), Icon::Plus, if resp.hovered() { t.tab_text_active } else { t.text_dim });
 }
 
-fn source_nav(app: &mut FilmcraftApp, cmd: &str) {
+fn source_nav(app: &mut ReelwrightApp, cmd: &str) {
     let Some(item) = app.session.state.source_item else { return };
-    let Some(v) = filmcraft_engine::clip_ops::source_view(&app.session, item) else { return };
+    let Some(v) = reelwright_engine::clip_ops::source_view(&app.session, item) else { return };
     let rate = v.rate;
     let cur = app.session.state.source_playhead;
     let t = match cmd {

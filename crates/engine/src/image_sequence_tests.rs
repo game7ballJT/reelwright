@@ -3,9 +3,9 @@
 
 use std::path::Path;
 
-use filmcraft_media::{FrameRequest, MediaKind};
-use filmcraft_project::{ClipId, ItemId};
-use filmcraft_time::FrameRate;
+use reelwright_media::{FrameRequest, MediaKind};
+use reelwright_project::{ClipId, ItemId};
+use reelwright_time::FrameRate;
 use serde_json::{Value, json};
 
 use crate::Session;
@@ -34,7 +34,7 @@ fn red_at(s: &Session, item: ItemId, frame: i64) -> u8 {
     let rate = src.info().frame_rate();
     let f = src.video_frame(FrameRequest::full(rate.tick_of(frame))).unwrap();
     match &f.data {
-        filmcraft_frame::PixelData::Rgba8(p) => p[0],
+        reelwright_frame::PixelData::Rgba8(p) => p[0],
         _ => panic!("rgba frames"),
     }
 }

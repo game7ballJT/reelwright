@@ -1,4 +1,4 @@
-//! Matroska/WebM media source (`filmcraft-matroska` demux, GOP-aware video via [`crate::gop`]).
+//! Matroska/WebM media source (`reelwright-matroska` demux, GOP-aware video via [`crate::gop`]).
 //!
 //! Video codecs are mapped onto ISO-BMFF sample entries so the same decoder factories serve both
 //! containers (H.264, HEVC, VP9, AV1, ProRes, MJPEG). Audio: AAC and Opus
@@ -12,12 +12,12 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use filmcraft_color::{ColorInfo, Matrix, Primaries, Range, Transfer};
-use filmcraft_frame::{AudioBuffer, VideoFrame};
-use filmcraft_isobmff::{AvcConfig, CodecConfig, FourCc, HevcConfig, PcmConfig, SampleEntry, VpcConfig};
-use filmcraft_matroska::{Codec, MkvFile, TrackKind};
-use filmcraft_media::{AudioStreamInfo, FrameRequest, MediaError, MediaInfo, MediaKind, MediaSource, SharedSource, VideoStreamInfo};
-use filmcraft_time::{FrameRate, Tick};
+use reelwright_color::{ColorInfo, Matrix, Primaries, Range, Transfer};
+use reelwright_frame::{AudioBuffer, VideoFrame};
+use reelwright_isobmff::{AvcConfig, CodecConfig, FourCc, HevcConfig, PcmConfig, SampleEntry, VpcConfig};
+use reelwright_matroska::{Codec, MkvFile, TrackKind};
+use reelwright_media::{AudioStreamInfo, FrameRequest, MediaError, MediaInfo, MediaKind, MediaSource, SharedSource, VideoStreamInfo};
+use reelwright_time::{FrameRate, Tick};
 
 use crate::audio::{PacketDecoder, decode_pcm};
 use crate::gop::{GopCache, VideoSamples};
@@ -57,7 +57,7 @@ pub struct MkvSource {
 /// rounded `CodecDelay`, so they are only accurate to a tick. Starts are therefore accumulated from
 /// each packet's TOC duration, resynchronising to the timestamp only across real gaps (more than
 /// two ticks off). Pre-skip is the exact `CodecDelay` (or the header's pre-skip when it is absent).
-fn opus_starts(file: &MkvFile, bytes: &crate::Src, ti: usize, head: &filmcraft_opus::OpusHead, rate: i64) -> Vec<i64> {
+fn opus_starts(file: &MkvFile, bytes: &crate::Src, ti: usize, head: &reelwright_opus::OpusHead, rate: i64) -> Vec<i64> {
     let t = &file.tracks[ti];
     let (n, d) = tb(t);
     let scale_ns = (n as i128 * 1_000_000_000 / d as i128).max(1);
@@ -83,19 +83,19 @@ fn opus_starts(file: &MkvFile, bytes: &crate::Src, ti: usize, head: &filmcraft_o
 }
 
 /// The parsed `OpusHead` of an `A_OPUS` track.
-fn opus_head(c: &Codec) -> Option<filmcraft_opus::OpusHead> {
+fn opus_head(c: &Codec) -> Option<reelwright_opus::OpusHead> {
     match c {
-        Codec::Opus { head } => filmcraft_opus::OpusHead::parse(head).ok(),
+        Codec::Opus { head } => reelwright_opus::OpusHead::parse(head).ok(),
         _ => None,
     }
 }
 
 /// Seconds per track timestamp unit as a rational.
-fn tb(t: &filmcraft_matroska::Track) -> (i64, i64) {
+fn tb(t: &reelwright_matroska::Track) -> (i64, i64) {
     (t.timebase.0.max(1) as i64, t.timebase.1.max(1) as i64)
 }
 
-fn to_tick(t: &filmcraft_matroska::Track, pts: i64) -> Tick {
+fn to_tick(t: &reelwright_matroska::Track, pts: i64) -> Tick {
     let (n, d) = tb(t);
     Tick::from_rational(pts * n, 1, d)
 }
@@ -103,14 +103,14 @@ fn to_tick(t: &filmcraft_matroska::Track, pts: i64) -> Tick {
 /// A time as the track timestamp to look a frame up by: rounded to the nearest tick, as muxers
 /// round frame times to `TimestampScale` (usually 1 ms). Flooring skipped every frame whose
 /// timestamp was rounded up (every third frame at 30 fps).
-fn from_tick(t: &filmcraft_matroska::Track, time: Tick) -> i64 {
+fn from_tick(t: &reelwright_matroska::Track, time: Tick) -> i64 {
     let (n, d) = tb(t);
     time.to_rational_round(n, d)
 }
 
 /// VP9 configuration from the Matroska `CodecPrivate` feature list (ID / length / value triples:
 /// 1 profile, 2 level, 3 bit depth, 4 chroma subsampling) and the track's `Colour`.
-fn vp9_config(private: &[u8], v: Option<&filmcraft_matroska::VideoInfo>) -> VpcConfig {
+fn vp9_config(private: &[u8], v: Option<&reelwright_matroska::VideoInfo>) -> VpcConfig {
     let mut c = VpcConfig { bit_depth: 8, colour_primaries: 2, transfer_characteristics: 2, matrix_coefficients: 2, ..Default::default() };
     let mut p = 0;
     while p + 2 <= private.len() {
@@ -141,11 +141,11 @@ fn vp9_config(private: &[u8], v: Option<&filmcraft_matroska::VideoInfo>) -> VpcC
     c
 }
 
-fn sample_entry(c: &Codec, private: &[u8], v: Option<&filmcraft_matroska::VideoInfo>, w: u16, h: u16) -> Option<SampleEntry> {
+fn sample_entry(c: &Codec, private: &[u8], v: Option<&reelwright_matroska::VideoInfo>, w: u16, h: u16) -> Option<SampleEntry> {
     Some(match c {
         Codec::Vp9 { private } => SampleEntry::video(FourCc(*b"vp09"), CodecConfig::Vp9(vp9_config(private, v)), w, h),
-        Codec::Av1 { av1c } => SampleEntry::video(FourCc(*b"av01"), CodecConfig::Av1(filmcraft_isobmff::Av1Config::parse(av1c).unwrap_or_default()), w, h),
-        Codec::Apv { apvc } => SampleEntry::apv(filmcraft_isobmff::ApvConfig::parse(apvc).unwrap_or_default(), w, h),
+        Codec::Av1 { av1c } => SampleEntry::video(FourCc(*b"av01"), CodecConfig::Av1(reelwright_isobmff::Av1Config::parse(av1c).unwrap_or_default()), w, h),
+        Codec::Apv { apvc } => SampleEntry::apv(reelwright_isobmff::ApvConfig::parse(apvc).unwrap_or_default(), w, h),
         Codec::Avc { avcc } => SampleEntry::avc(AvcConfig::parse(avcc).ok()?, w, h),
         Codec::Hevc { hvcc } => SampleEntry::hevc(HevcConfig::parse(hvcc).ok()?, w, h),
         Codec::ProRes { fourcc } => SampleEntry::prores(FourCc(fourcc.unwrap_or(*b"apcn")), w, h),
@@ -159,12 +159,12 @@ fn sample_entry(c: &Codec, private: &[u8], v: Option<&filmcraft_matroska::VideoI
 }
 
 /// HDR static metadata from the Matroska `Colour` element.
-fn hdr_metadata(c: &filmcraft_matroska::Colour) -> Option<filmcraft_color::HdrMetadata> {
+fn hdr_metadata(c: &reelwright_matroska::Colour) -> Option<reelwright_color::HdrMetadata> {
     if c.mastering.is_none() && c.max_cll.is_none() && c.max_fall.is_none() {
         return None;
     }
     let nz = |v: f64| (v > 0.0).then_some(v as f32);
-    Some(filmcraft_color::HdrMetadata {
+    Some(reelwright_color::HdrMetadata {
         mastering_max_nits: c.mastering.as_ref().and_then(|m| nz(m.luminance_max)),
         mastering_min_nits: c.mastering.as_ref().map(|m| m.luminance_min as f32),
         max_cll: c.max_cll.and_then(|v| nz(v as f64)),
@@ -172,8 +172,8 @@ fn hdr_metadata(c: &filmcraft_matroska::Colour) -> Option<filmcraft_color::HdrMe
     })
 }
 
-fn color_of(v: &filmcraft_matroska::VideoInfo, w: u32, h: u32) -> (ColorInfo, bool) {
-    let mut c = ColorInfo { matrix: filmcraft_frame::default_matrix(w, h), transfer: Transfer::Bt709, primaries: Primaries::Bt709, range: Range::Limited };
+fn color_of(v: &reelwright_matroska::VideoInfo, w: u32, h: u32) -> (ColorInfo, bool) {
+    let mut c = ColorInfo { matrix: reelwright_frame::default_matrix(w, h), transfer: Transfer::Bt709, primaries: Primaries::Bt709, range: Range::Limited };
     let Some(col) = &v.colour else { return (c, false) };
     let mut explicit = false;
     if let Some(m) = col.matrix_coefficients.and_then(|m| Matrix::from_code(m as u8)) {
@@ -207,7 +207,7 @@ fn codec_label(c: &Codec) -> String {
         Codec::Vp8 => "VP8".into(),
         Codec::Vp9 { .. } => "VP9".into(),
         Codec::Av1 { .. } => "AV1".into(),
-        Codec::Apv { apvc } => match filmcraft_isobmff::ApvConfig::parse(apvc).ok().and_then(|a| filmcraft_apv::Profile::from_idc(a.profile_idc)) {
+        Codec::Apv { apvc } => match reelwright_isobmff::ApvConfig::parse(apvc).ok().and_then(|a| reelwright_apv::Profile::from_idc(a.profile_idc)) {
             Some(p) => p.name().into(),
             None => "APV".into(),
         },
@@ -228,13 +228,13 @@ fn codec_label(c: &Codec) -> String {
 
 impl MkvSource {
     pub fn open(name: &str, bytes: Arc<[u8]>) -> crate::Result<Self> {
-        Self::open_reader(name, Arc::new(filmcraft_media::reader::MemReader(bytes)))
+        Self::open_reader(name, Arc::new(reelwright_media::reader::MemReader(bytes)))
     }
 
     /// Open from a random-access reader: only the index is read now, samples on demand.
-    pub fn open_reader(name: &str, reader: filmcraft_media::SharedReader) -> crate::Result<Self> {
+    pub fn open_reader(name: &str, reader: reelwright_media::SharedReader) -> crate::Result<Self> {
         let bytes = crate::Src(reader);
-        let file = filmcraft_matroska::open(&bytes).map_err(|e| CodecError::Container(e.to_string()))?;
+        let file = reelwright_matroska::open(&bytes).map_err(|e| CodecError::Container(e.to_string()))?;
         let vtrack = file.tracks.iter().position(|t| t.kind == TrackKind::Video && !t.samples.is_empty());
         let atrack = file.tracks.iter().position(|t| t.kind == TrackKind::Audio && !t.samples.is_empty());
         if vtrack.is_none() && atrack.is_none() {
@@ -358,7 +358,7 @@ impl MkvSource {
         use symphonia::core::codecs::{CODEC_TYPE_FLAC, CODEC_TYPE_MP3, CODEC_TYPE_VORBIS};
         match c {
             Codec::Aac { asc } => PacketDecoder::aac(asc, rate),
-            Codec::Opus { head } => PacketDecoder::opus(filmcraft_opus::OpusHead::parse(head).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?),
+            Codec::Opus { head } => PacketDecoder::opus(reelwright_opus::OpusHead::parse(head).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?),
             Codec::Mp3 => PacketDecoder::new(CODEC_TYPE_MP3, rate, None),
             Codec::Mp2 => PacketDecoder::mpeg_audio(2, rate),
             Codec::Ac3 => PacketDecoder::ac3(),
@@ -468,7 +468,7 @@ impl MediaSource for MkvSource {
         let ti = self.vtrack.ok_or(MediaError::NoStream("video"))?;
         let t = req.time.max(Tick::ZERO);
         let target = from_tick(&self.file.tracks[ti], t);
-        let late = filmcraft_media::cancel::catch_up().map(|m| from_tick(&self.file.tracks[ti], t - m));
+        let late = reelwright_media::cancel::catch_up().map(|m| from_tick(&self.file.tracks[ti], t - m));
         Ok(self.video.frame_late(&MkvVideo { src: self, track: ti }, target, late)?)
     }
 
@@ -525,8 +525,8 @@ pub fn opener(name: &str, bytes: Arc<[u8]>) -> Option<Result<SharedSource, Media
     Some(MkvSource::open(name, bytes).map(|s| Arc::new(s) as SharedSource).map_err(Into::into))
 }
 
-/// [`filmcraft_media::ReaderOpener`] for Matroska/WebM.
-pub fn reader_opener(name: &str, head: &[u8], reader: &filmcraft_media::SharedReader) -> Option<Result<SharedSource, MediaError>> {
+/// [`reelwright_media::ReaderOpener`] for Matroska/WebM.
+pub fn reader_opener(name: &str, head: &[u8], reader: &reelwright_media::SharedReader) -> Option<Result<SharedSource, MediaError>> {
     if !sniff(head) {
         return None;
     }

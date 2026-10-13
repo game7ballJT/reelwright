@@ -1,8 +1,8 @@
 use super::*;
-use filmcraft_media::generators::GeneratorSource;
-use filmcraft_media::{DemoScene, Generator, MediaSource};
-use filmcraft_project::{Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
-use filmcraft_time::{FrameRate, TICKS_PER_SECOND, TimeRange};
+use reelwright_media::generators::GeneratorSource;
+use reelwright_media::{DemoScene, Generator, MediaSource};
+use reelwright_project::{Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
+use reelwright_time::{FrameRate, TICKS_PER_SECOND, TimeRange};
 
 fn setup() -> (Project, ItemId, ItemId, ItemId, SourceMap) {
     let mut p = Project::new("r");
@@ -36,7 +36,7 @@ fn setup() -> (Project, ItemId, ItemId, ItemId, SourceMap) {
     (p, red, ocean, seq, map)
 }
 
-fn place(p: &mut Project, seq: ItemId, track: usize, item: ItemId, start_f: i64, dur_f: i64) -> filmcraft_project::ClipId {
+fn place(p: &mut Project, seq: ItemId, track: usize, item: ItemId, start_f: i64, dur_f: i64) -> reelwright_project::ClipId {
     let r = FrameRate::FPS_24;
     let ti = p.make_track_item(item, TrackKind::Video, r.tick_of(start_f), TimeRange::new(Tick::ZERO, r.tick_of(dur_f)), r).unwrap();
     let id = ti.id;
@@ -87,7 +87,7 @@ fn motion_scale_and_position() {
     let (_, it) = s.find_item_mut(id).unwrap();
     let m = it.effect_mut("motion").unwrap();
     m.params.get_mut("scale").unwrap().value = ParamValue::Float(50.0);
-    m.params.get_mut("position").unwrap().value = ParamValue::Vec2(filmcraft_geom::Vec2::new(80.0, 45.0));
+    m.params.get_mut("position").unwrap().value = ParamValue::Vec2(reelwright_geom::Vec2::new(80.0, 45.0));
     let img = render_sequence(&p, seq, Tick(0), RenderOptions::default(), &map);
     assert!(img.get(80, 45)[3] > 0.99);
     assert!(img.get(10, 10)[3] > 0.99, "top-left quadrant covered");
@@ -120,9 +120,9 @@ fn cross_dissolve_midpoint() {
     map.0.insert(blue, Arc::new(blue_src));
     let b = place(&mut p, seq, 0, blue, 24, 24);
     let r = FrameRate::FPS_24;
-    let tr = filmcraft_project::Transition {
-        id: filmcraft_project::TransitionId(999),
-        effect: filmcraft_project::find_effect("cross_dissolve").unwrap().instance(),
+    let tr = reelwright_project::Transition {
+        id: reelwright_project::TransitionId(999),
+        effect: reelwright_project::find_effect("cross_dissolve").unwrap().instance(),
         start: r.tick_of(18),
         duration: r.tick_of(12),
         from: Some(a),
@@ -137,7 +137,7 @@ fn cross_dissolve_midpoint() {
     // Iris Round at 50 %: B opens in the centre; reversed, A closes into the centre instead.
     for reverse in [false, true] {
         let trs = &mut p.sequence_mut(seq).unwrap().video_tracks[0].transitions;
-        trs[0].effect = filmcraft_project::find_effect("iris_round").unwrap().instance();
+        trs[0].effect = reelwright_project::find_effect("iris_round").unwrap().instance();
         trs[0].reverse = reverse;
         let opts = RenderOptions { scale: 0.25, ..RenderOptions::default() };
         let img = render_sequence(&p, seq, r.tick_of(24), opts, &map);
@@ -235,7 +235,7 @@ fn tone_with(effects: &[(&str, &[(&str, f64)])]) -> (Project, ItemId, SourceMap)
     let r = FrameRate::FPS_23_976;
     let mut ti = p.make_track_item(id, TrackKind::Audio, Tick::ZERO, TimeRange::new(Tick::ZERO, Tick(4 * TICKS_PER_SECOND)), r).unwrap();
     for (fx, params) in effects {
-        let mut e = filmcraft_project::find_effect(fx).expect("effect").instance();
+        let mut e = reelwright_project::find_effect(fx).expect("effect").instance();
         for (k, v) in *params {
             e.param_mut(k).expect("param").value = ParamValue::Float(*v);
         }
@@ -295,7 +295,7 @@ fn offline_slate_is_deterministic_and_marked() {
     assert!(px(0, 359)[0] >= FIELD[0] && px(0, 359)[1] <= 0x20, "{:?}", px(0, 359));
     // tiny sizes work (thumbnails)
     assert_eq!(slate_rgba8(8, 4, "x", OfflineReason::Unreadable).len(), 8 * 4 * 4);
-    if let Some(p) = std::env::var_os("FILMCRAFT_SLATE_PNG") {
+    if let Some(p) = std::env::var_os("REELWRIGHT_SLATE_PNG") {
         ::image::save_buffer(p, &a, 640, 360, ::image::ExtendedColorType::Rgba8).unwrap();
     }
 }
@@ -304,24 +304,24 @@ fn offline_slate_is_deterministic_and_marked() {
 struct YuvSource(GeneratorSource);
 
 impl MediaSource for YuvSource {
-    fn info(&self) -> &filmcraft_media::MediaInfo {
+    fn info(&self) -> &reelwright_media::MediaInfo {
         self.0.info()
     }
-    fn video_frame(&self, _req: FrameRequest) -> filmcraft_media::Result<Arc<filmcraft_frame::VideoFrame>> {
+    fn video_frame(&self, _req: FrameRequest) -> reelwright_media::Result<Arc<reelwright_frame::VideoFrame>> {
         let (w, h) = (320usize, 180usize);
         let y = (0..w * h).map(|i| (16 + (i % w) * 200 / w + (i / w) * 20 / h) as u8).collect();
         let u = (0..w * h / 4).map(|i| (90 + (i % (w / 2)) * 60 / (w / 2)) as u8).collect();
         let v = (0..w * h / 4).map(|i| (100 + (i / (w / 2)) * 50 / (h / 2)) as u8).collect();
-        Ok(Arc::new(filmcraft_frame::VideoFrame {
+        Ok(Arc::new(reelwright_frame::VideoFrame {
             width: w as u32,
             height: h as u32,
-            data: filmcraft_frame::PixelData::Yuv8 { planes: [Arc::new(y), Arc::new(u), Arc::new(v)], chroma: filmcraft_frame::Chroma::C420, alpha: None },
-            color: filmcraft_color::ColorInfo::REC709,
+            data: reelwright_frame::PixelData::Yuv8 { planes: [Arc::new(y), Arc::new(u), Arc::new(v)], chroma: reelwright_frame::Chroma::C420, alpha: None },
+            color: reelwright_color::ColorInfo::REC709,
             par: (1, 1),
             pts: Tick::ZERO,
         }))
     }
-    fn audio(&self, start: i64, frames: usize, sample_rate: u32) -> filmcraft_media::Result<filmcraft_frame::AudioBuffer> {
+    fn audio(&self, start: i64, frames: usize, sample_rate: u32) -> reelwright_media::Result<reelwright_frame::AudioBuffer> {
         self.0.audio(start, frames, sample_rate)
     }
 }
@@ -336,11 +336,11 @@ fn draft_reduced_resolution_plans_carry_decimated_yuv() {
     for draft in [false, true] {
         for (scale, small_w) in [(1.0f32, 320u32), (0.5, 160), (0.25, 80)] {
             let opts = RenderOptions { scale, ..Default::default() };
-            let plan = filmcraft_media::cancel::with_draft(draft, || plan::plan_frame(&p, seq, t, opts, &map));
+            let plan = reelwright_media::cancel::with_draft(draft, || plan::plan_frame(&p, seq, t, opts, &map));
             let plan::FramePlan::Layers { layers, .. } = &plan else { panic!("GPU-drawable") };
             // exact playback hands over the decoded picture; draft playback planes at the drawn size
             assert_eq!(layers[0].frame.width, if draft { small_w } else { 320 }, "scale {scale}, draft {draft}");
-            assert!(matches!(layers[0].frame.data, filmcraft_frame::PixelData::Yuv8 { .. }));
+            assert!(matches!(layers[0].frame.data, reelwright_frame::PixelData::Yuv8 { .. }));
             let got = plan::execute_cpu(&plan);
             let reference = render_sequence(&p, seq, t, opts, &map);
             assert_eq!((got.w, got.h), (reference.w, reference.h));
@@ -360,7 +360,7 @@ fn a_multicam_clip_showing_itself_plans_and_renders_to_an_end() {
     let a = p.new_sequence("a", SequenceSettings::default(), 1, 0, None);
     let rate = FrameRate::default();
     let mut it = p.make_track_item(a, TrackKind::Video, Tick::ZERO, TimeRange::new(Tick::ZERO, Tick(TICKS_PER_SECOND)), rate).unwrap();
-    it.multicam = Some(filmcraft_project::multicam::MulticamSel { enabled: true, angle: 0 });
+    it.multicam = Some(reelwright_project::multicam::MulticamSel { enabled: true, angle: 0 });
     p.sequence_mut(a).unwrap().video_tracks[0].items.push(it);
     let opts = RenderOptions { scale: 0.1, ..Default::default() };
     let sources = SourceMap::default();

@@ -5,11 +5,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use filmcraft_media::generators::GeneratorSource;
-use filmcraft_media::{FrameRequest, Generator, MediaSource};
-use filmcraft_project::{ItemKind, Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
-use filmcraft_render::SourceMap;
-use filmcraft_time::TICKS_PER_SECOND;
+use reelwright_media::generators::GeneratorSource;
+use reelwright_media::{FrameRequest, Generator, MediaSource};
+use reelwright_project::{ItemKind, Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
+use reelwright_render::SourceMap;
+use reelwright_time::TICKS_PER_SECOND;
 
 use super::*;
 
@@ -18,7 +18,7 @@ struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(name: &str) -> Self {
-        let d = filmcraft_testkit::fixtures::workspace_root().join("target").join("export-tests").join(format!("{name}-{}", std::process::id()));
+        let d = reelwright_testkit::fixtures::workspace_root().join("target").join("export-tests").join(format!("{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         Scratch(d)
@@ -74,7 +74,7 @@ fn matte(color: [f32; 4], w: u32, h: u32, tone_db: Option<f32>) -> (Arc<Project>
 }
 
 fn ffprobe_json(args: &[&str], path: &str) -> Option<serde_json::Value> {
-    let ffprobe = filmcraft_testkit::ffprobe_or_skip("export settings")?;
+    let ffprobe = reelwright_testkit::ffprobe_or_skip("export settings")?;
     let mut a = vec!["-v", "error", "-of", "json"];
     a.extend_from_slice(args);
     a.push(path);
@@ -198,7 +198,7 @@ fn frame_size_rate_and_scaling() {
     let r = export(&p, seq, &s, &m, &Progress::default()).unwrap();
     assert_eq!(r.frames, 12, "1 s at 12 fps");
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_codecs::open_bytes("square.mp4", bytes).unwrap();
+    let src = reelwright_codecs::open_bytes("square.mp4", bytes).unwrap();
     let v = src.info().video.clone().unwrap();
     assert_eq!((v.width, v.height), (256, 256));
     let f = src.video_frame(FrameRequest::full(Tick(TICKS_PER_SECOND / 2))).unwrap().to_rgba8();
@@ -224,7 +224,7 @@ fn frame_size_rate_and_scaling() {
     };
     export(&p, seq, &s, &m, &Progress::default()).unwrap();
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_codecs::open_bytes("fill.mov", bytes).unwrap();
+    let src = reelwright_codecs::open_bytes("fill.mov", bytes).unwrap();
     let f = src.video_frame(FrameRequest::full(Tick(TICKS_PER_SECOND / 2))).unwrap().to_rgba8();
     assert!(f[(5 * 200 + 100) * 4] > 200, "filled to the top edge");
 }
@@ -232,7 +232,7 @@ fn frame_size_rate_and_scaling() {
 /// Integrated loudness of planar audio.
 fn lufs(planar: &[Vec<f32>], sr: u32) -> (f64, f64) {
     let refs: Vec<&[f32]> = planar.iter().map(Vec::as_slice).collect();
-    let s = filmcraft_audio_dsp::loudness::measure(&refs, sr as f64);
+    let s = reelwright_audio_dsp::loudness::measure(&refs, sr as f64);
     (s.integrated_lufs, s.true_peak_dbtp)
 }
 
@@ -276,7 +276,7 @@ fn loudness_normalization_hits_target_and_true_peak() {
     s.effects.loudness = LoudnessNormalization { enabled: true, target_lufs: -20.0, true_peak_dbtp: -1.0 };
     export(&p, seq, &s, &m, &Progress::default()).unwrap();
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_codecs::open_bytes("loud.mp4", bytes).unwrap();
+    let src = reelwright_codecs::open_bytes("loud.mp4", bytes).unwrap();
     let a = src.audio(4800, 38_400, 48_000).unwrap();
     let (i, _) = lufs(&a.channels, 48_000);
     assert!((i + 20.0).abs() < 0.5, "AAC: {i:.2} LUFS");
@@ -296,7 +296,7 @@ fn two_pass_and_cbr_h264() {
         assert_eq!(prog.total.load(Ordering::Relaxed), 24 * passes);
         assert_eq!(prog.done.load(Ordering::Relaxed), 24 * passes);
         let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-        let src = filmcraft_codecs::open_bytes("x.mp4", bytes).unwrap();
+        let src = reelwright_codecs::open_bytes("x.mp4", bytes).unwrap();
         let f = src.video_frame(FrameRequest::full(Tick(TICKS_PER_SECOND / 2))).unwrap().to_rgba8();
         assert!((f[2] as i32 - 204).abs() < 12 && (f[1] as i32 - 127).abs() < 12, "{mode:?}: {:?}", &f[..4]);
     }
@@ -376,7 +376,7 @@ fn metadata_and_quicktime_multiplexer() {
     let dir = Scratch::new("meta");
     let path = dir.path("m.mov");
     let mut s = ExportSettings { format: Format::H264, path: path.clone(), multiplexer: Multiplexer::Mov, ..Default::default() };
-    s.metadata = ExportMetadata { title: "Test Title".into(), creator: "FilmCraft Tests".into(), copyright: "CC0".into(), ..Default::default() };
+    s.metadata = ExportMetadata { title: "Test Title".into(), creator: "Reelwright Tests".into(), copyright: "CC0".into(), ..Default::default() };
     s.audio.codec = AudioCodec::Pcm;
     s.audio.bits = 24;
     assert_eq!(s.extension(), "mov");

@@ -4,7 +4,7 @@
 //!   listed same-layer edges, L0 codec crates depend on `bitstream` only, no UI/OS crates below L5).
 //! - `wasm`: `cargo check --target wasm32-unknown-unknown` for every crate in L0–L4, the egui UI
 //!   and the web app.
-//! - `web [--dev] [--serve PORT]`: build the web app (`apps/filmcraft-web`) into
+//! - `web [--dev] [--serve PORT]`: build the web app (`apps/reelwright-web`) into
 //!   `<target>/web/dist` with `wasm-bindgen` (docs/web.md); `--serve` serves it on localhost.
 //! - `assets`: every asset file (image, icon, font, LUT, audio, video…) has a complete
 //!   `<file>.attribution` sidecar and an entry in `ATTRIBUTION.md` (AGENTS.md §1).
@@ -21,7 +21,7 @@ use std::process::{Command, ExitCode};
 
 use serde_json::Value;
 
-/// (crate name without the `filmcraft-` prefix, layer).
+/// (crate name without the `reelwright-` prefix, layer).
 const LAYERS: &[(&str, u8)] = &[
     ("testkit", 0),
     ("time", 0),
@@ -72,7 +72,7 @@ const LAYERS: &[(&str, u8)] = &[
     ("platform", 5),
     ("ui-egui", 5),
     ("automation", 5),
-    ("filmcraft", 6),
+    ("reelwright", 6),
     ("cli", 6),
     ("web", 6),
 ];
@@ -92,14 +92,14 @@ const SAME_LAYER: &[(&str, &str)] = &[
     ("export", "render"),
     ("scopes", "gpu"),
     ("gpu", "render"),
-    ("cli", "filmcraft"),
+    ("cli", "reelwright"),
 ];
 
 /// Crates that must not appear below L5 (UI toolkits, windowing, OS audio/menus).
 const UI_ONLY: &[&str] = &["egui", "eframe", "egui-wgpu", "winit", "rfd", "cpal", "muda"];
 
 fn short(name: &str) -> &str {
-    name.strip_prefix("filmcraft-").unwrap_or(name)
+    name.strip_prefix("reelwright-").unwrap_or(name)
 }
 
 fn layer_of(name: &str) -> Option<u8> {
@@ -145,7 +145,7 @@ fn layers() -> Result<(), String> {
             if l < 5 && UI_ONLY.contains(&d.as_str()) {
                 errors.push(format!("{name} (L{l}) depends on UI/OS crate `{d}`"));
             }
-            if !d.starts_with("filmcraft-") {
+            if !d.starts_with("reelwright-") {
                 continue;
             }
             let Some(dl) = layer_of(d) else { continue };
@@ -241,7 +241,7 @@ fn run(cmd: &mut Command) -> Result<(), String> {
 }
 
 /// Crates above L4 that must also build for the web.
-const WEB_CRATES: &[&str] = &["filmcraft-ui-egui", "filmcraft-web"];
+const WEB_CRATES: &[&str] = &["reelwright-ui-egui", "reelwright-web"];
 
 fn wasm() -> Result<(), String> {
     let md = metadata()?;
@@ -273,9 +273,9 @@ fn target_dir() -> std::path::PathBuf {
 fn web(args: &[String]) -> Result<(), String> {
     let dev = args.iter().any(|a| a == "--dev");
     let serve = args.iter().position(|a| a == "--serve").map(|i| args.get(i + 1).and_then(|p| p.parse::<u16>().ok()).unwrap_or(8765));
-    let profile = if dev { "dev" } else { "release" };
+    let profile = if dev { "dev" } else { "wasm-release" };
     let mut build = Command::new(env!("CARGO"));
-    build.args(["build", "--target", "wasm32-unknown-unknown", "-p", "filmcraft-web", "--profile", profile]);
+    build.args(["build", "--target", "wasm32-unknown-unknown", "-p", "reelwright-web", "--profile", profile]);
     run(&mut build)?;
     let out = Command::new("wasm-bindgen")
         .arg("--version")
@@ -288,16 +288,16 @@ fn web(args: &[String]) -> Result<(), String> {
             v.trim()
         ));
     }
-    let dir = if dev { "debug" } else { "release" };
-    let wasm = target_dir().join("wasm32-unknown-unknown").join(dir).join("filmcraft_web.wasm");
+    let dir = if dev { "debug" } else { "wasm-release" };
+    let wasm = target_dir().join("wasm32-unknown-unknown").join(dir).join("reelwright_web.wasm");
     let dist = target_dir().join("web").join("dist");
     let _ = std::fs::remove_dir_all(&dist);
     std::fs::create_dir_all(&dist).map_err(|e| e.to_string())?;
     run(Command::new("wasm-bindgen").args(["--target", "web", "--no-typescript", "--out-dir"]).arg(&dist).arg(&wasm))?;
-    let bg = dist.join("filmcraft_web_bg.wasm");
+    let bg = dist.join("reelwright_web_bg.wasm");
     if !dev && Command::new("wasm-opt").arg("--version").output().is_ok() {
         // optional: smaller and faster (binaryen); skipped when not installed
-        let opt = dist.join("filmcraft_web_opt.wasm");
+        let opt = dist.join("reelwright_web_opt.wasm");
         run(Command::new("wasm-opt")
             .args(["-O2", "--enable-bulk-memory", "--enable-nontrapping-float-to-int", "--enable-sign-ext", "--enable-mutable-globals"])
             .arg(&bg)
@@ -309,19 +309,22 @@ fn web(args: &[String]) -> Result<(), String> {
     // immutable (packaging/web/_headers), so a new build must change their URLs.
     let build = {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325; // FNV-1a
-        for f in ["filmcraft_web.js", "filmcraft_web_bg.wasm"] {
+        for f in ["reelwright_web.js", "reelwright_web_bg.wasm"] {
             for b in std::fs::read(dist.join(f)).map_err(|e| format!("{f}: {e}"))? {
                 h = (h ^ b as u64).wrapping_mul(0x100_0000_01b3);
             }
         }
         format!("{h:016x}")
     };
-    let web = std::path::Path::new("apps/filmcraft-web/web");
+    let web = std::path::Path::new("apps/reelwright-web/web");
     for e in std::fs::read_dir(web).map_err(|e| e.to_string())?.flatten() {
         let name = e.file_name().to_string_lossy().to_string();
         if name == "index.html" {
             let html = std::fs::read_to_string(e.path()).map_err(|e| format!("{name}: {e}"))?;
             std::fs::write(dist.join(&name), html.replace("__FC_BUILD__", &build)).map_err(|e| format!("{name}: {e}"))?;
+        } else if e.path().is_dir() {
+            // e.g. `samples/`: projects the page opens with `?open=samples/<name>.fcproj`
+            copy_dir(&e.path(), &dist.join(&name))?;
         } else if !name.ends_with(".attribution") {
             std::fs::copy(e.path(), dist.join(&name)).map_err(|e| format!("{name}: {e}"))?;
         }
@@ -331,6 +334,20 @@ fn web(args: &[String]) -> Result<(), String> {
     println!("web: {} ({:.1} MB wasm, {:.1} MB total)", dist.display(), size(&bg) as f64 / 1e6, total as f64 / 1e6);
     if let Some(port) = serve {
         serve_dir(&dist, port)?;
+    }
+    Ok(())
+}
+
+/// Copy a folder and what is in it (files and sub-folders; sidecars are not shipped).
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> Result<(), String> {
+    std::fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
+    for e in std::fs::read_dir(from).map_err(|e| format!("{}: {e}", from.display()))?.flatten() {
+        let name = e.file_name();
+        if e.path().is_dir() {
+            copy_dir(&e.path(), &to.join(&name))?;
+        } else if !name.to_string_lossy().ends_with(".attribution") {
+            std::fs::copy(e.path(), to.join(&name)).map_err(|err| format!("{}: {err}", e.path().display()))?;
+        }
     }
     Ok(())
 }
@@ -408,15 +425,15 @@ fn fixtures(only: &[String]) -> Result<(), String> {
         let known: Vec<&str> = FIXTURE_GENERATORS.iter().map(|(c, _)| *c).collect();
         return Err(format!("no fixture generator for {unknown:?} (known: {})", known.join(", ")));
     }
-    let Some(ff) = filmcraft_testkit::ffmpeg() else {
-        return Err("ffmpeg not found: set FILMCRAFT_FFMPEG=/path/to/ffmpeg or put ffmpeg on PATH".into());
+    let Some(ff) = reelwright_testkit::ffmpeg() else {
+        return Err("ffmpeg not found: set REELWRIGHT_FFMPEG=/path/to/ffmpeg or put ffmpeg on PATH".into());
     };
     println!("ffmpeg:   {}", ff.display());
-    println!("fixtures: {}", filmcraft_testkit::fixtures::fixtures_root().display());
+    println!("fixtures: {}", reelwright_testkit::fixtures::fixtures_root().display());
     let (mut made, mut cached, mut skipped) = (0, 0, 0);
     let mut failed = Vec::new();
     for (krate, target) in FIXTURE_GENERATORS.iter().filter(|(c, _)| only.is_empty() || only.iter().any(|o| short(o) == *c)) {
-        let pkg = format!("filmcraft-{krate}");
+        let pkg = format!("reelwright-{krate}");
         println!("\n== {pkg} ({target})");
         let mut cmd = Command::new(env!("CARGO"));
         cmd.args(["test", "--release", "-p", &pkg, "--test", target, "--", "--ignored", "--exact", "generate_fixtures", "--nocapture"]);
@@ -453,7 +470,7 @@ fn ci() -> Result<(), String> {
 /// arguments go to the benchmark (`cargo xtask bench-playback --scenario stack3 --res full`).
 fn bench_playback() -> Result<(), String> {
     let extra: Vec<String> = std::env::args().skip(2).collect();
-    run(Command::new(env!("CARGO")).args(["run", "--release", "-p", "filmcraft-ui-egui", "--example", "bench_playback", "--"]).args(&extra))
+    run(Command::new(env!("CARGO")).args(["run", "--release", "-p", "reelwright-ui-egui", "--example", "bench_playback", "--"]).args(&extra))
 }
 
 /// The benchmark suite (`crates/ui-egui/examples/bench/`): decode, playback, scrubbing, timeline
@@ -461,7 +478,7 @@ fn bench_playback() -> Result<(), String> {
 /// (`cargo xtask bench --sections decode,scrub --repeat 3 --label after`). See docs/performance.md.
 fn bench() -> Result<(), String> {
     let extra: Vec<String> = std::env::args().skip(2).collect();
-    run(Command::new(env!("CARGO")).args(["run", "--release", "-p", "filmcraft-ui-egui", "--example", "bench", "--"]).args(&extra))
+    run(Command::new(env!("CARGO")).args(["run", "--release", "-p", "reelwright-ui-egui", "--example", "bench", "--"]).args(&extra))
 }
 
 /// The workspace root (the parent of `xtask/`).

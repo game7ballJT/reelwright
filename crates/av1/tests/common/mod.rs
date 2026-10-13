@@ -2,16 +2,16 @@
 //! decode the reference) is used only as an external process.
 #![allow(dead_code)]
 
-use filmcraft_av1::{Decoder, Picture};
+use reelwright_av1::{Decoder, Picture};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn ffmpeg() -> Option<PathBuf> {
-    filmcraft_testkit::ffmpeg_or_skip("av1 oracle")
+    reelwright_testkit::ffmpeg_or_skip("av1 oracle")
 }
 
 pub fn fixture_dir() -> PathBuf {
-    filmcraft_testkit::fixtures_dir("av1")
+    reelwright_testkit::fixtures_dir("av1")
 }
 
 pub fn run(ff: &Path, args: &[&str]) {
@@ -38,7 +38,7 @@ impl Spec {
 pub fn make(ff: &Path, spec: &Spec) -> PathBuf {
     let path = fixture_dir().join(format!("{}.ivf", spec.name));
     if !path.exists() {
-        let tmp = filmcraft_testkit::temp_path(&path);
+        let tmp = reelwright_testkit::temp_path(&path);
         let frames = spec.frames.to_string();
         let t = tmp.to_str().unwrap().to_string();
         let mut args: Vec<&str> = vec!["-f", "lavfi", "-i", spec.lavfi.as_str(), "-frames:v", frames.as_str(), "-pix_fmt", spec.pix_fmt, "-c:v", "libsvtav1"];
@@ -202,12 +202,12 @@ pub fn test_vector(name: &str) -> Option<PathBuf> {
     if path.exists() {
         return Some(path);
     }
-    let tmp = filmcraft_testkit::temp_path(&path);
+    let tmp = reelwright_testkit::temp_path(&path);
     let url = format!("https://storage.googleapis.com/aom-test-data/{name}");
     let ok = Command::new("curl").args(["-sfL", "--max-time", "120", "-o"]).arg(&tmp).arg(&url).status().map(|s| s.success()).unwrap_or(false);
     if !ok {
         let _ = std::fs::remove_file(&tmp);
-        filmcraft_testkit::skip("av1 conformance", &format!("could not download {url}"));
+        reelwright_testkit::skip("av1 conformance", &format!("could not download {url}"));
         return None;
     }
     std::fs::rename(&tmp, &path).ok()?;

@@ -1,5 +1,5 @@
 # Release pipeline: every push to `release` builds signed installers for every platform and
-# creates or updates the draft GitHub Release "FilmCraft v<version>". See docs/releasing.md.
+# creates or updates the draft GitHub Release "Reelwright v<version>". See docs/releasing.md.
 #
 # The jobs that sign (macOS, Windows) and the one that publishes the draft run in the `release`
 # environment (restricted to the `release` branch), which holds the signing secrets. Every secret
@@ -31,7 +31,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
-  FILMCRAFT_BUILD_SHA: ${{ github.sha }}
+  REELWRIGHT_BUILD_SHA: ${{ github.sha }}
   INPUT_VERSION: ${{ inputs.version }}
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
             echo "date=$(date -u +%Y-%m-%d)"
             echo "prerelease=$pre"
           } >>"$GITHUB_OUTPUT"
-          echo "### FilmCraft v$v (\`${GITHUB_SHA::9}\`)" >>"$GITHUB_STEP_SUMMARY"
+          echo "### Reelwright v$v (\`${GITHUB_SHA::9}\`)" >>"$GITHUB_STEP_SUMMARY"
 
   macos:
     name: macOS universal
@@ -68,8 +68,8 @@ jobs:
     runs-on: macos-15-xlarge  # M2 Pro larger runner; use only in release.yml (actions_macos_xl budget caps spend)
     environment: release
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Fonts (optional build input, required for releases): docs/contributing.md#building-with-craft-fonts
@@ -86,7 +86,7 @@ jobs:
           key: release-macos-universal
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$FILMCRAFT_VERSION"
+        run: cargo xtask version set "$REELWRIGHT_VERSION"
       - name: Import signing certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -126,8 +126,8 @@ jobs:
           # .github/workflows/windows-arm64.yml installs and runs it on ARM64 hardware.
           - { arch: arm64, target: aarch64-pc-windows-msvc }
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Fonts (optional build input, required for releases): docs/contributing.md#building-with-craft-fonts
@@ -145,7 +145,7 @@ jobs:
       - name: Apply version override
         if: inputs.version != ''
         shell: bash
-        run: cargo xtask version set "$FILMCRAFT_VERSION"
+        run: cargo xtask version set "$REELWRIGHT_VERSION"
       - name: Install WiX
         shell: pwsh
         run: dotnet tool install --global wix --version 5.0.2
@@ -183,8 +183,8 @@ jobs:
           - { arch: x86_64, runner: ubuntu-22.04, deb: amd64 }
           - { arch: aarch64, runner: ubuntu-22.04-arm, deb: arm64 }
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
       NFPM_VERSION: 2.47.0
     steps:
       - uses: actions/checkout@v4
@@ -209,7 +209,7 @@ jobs:
           key: release-linux-${{ matrix.arch }}
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$FILMCRAFT_VERSION"
+        run: cargo xtask version set "$REELWRIGHT_VERSION"
       - name: Build and package (AppImage, deb, rpm, tar.gz)
         env:
           CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
@@ -218,9 +218,9 @@ jobs:
       - name: Check the packages
         run: |
           dpkg-deb --info dist/release/*.deb
-          dpkg-deb --contents dist/release/*.deb | grep -E 'usr/bin/filmcraft$|metainfo|applications'
-          ldd target/release/filmcraft
-          python3 -c "import yaml; m = yaml.safe_load(open('packaging/linux/flatpak/ai.storyteller.filmcraft.yml')); assert m['id'] == 'ai.storyteller.filmcraft'"
+          dpkg-deb --contents dist/release/*.deb | grep -E 'usr/bin/reelwright$|metainfo|applications'
+          ldd target/release/reelwright
+          python3 -c "import yaml; m = yaml.safe_load(open('packaging/linux/flatpak/online.jonmcgee.reelwright.yml')); assert m['id'] == 'online.jonmcgee.reelwright'"
           for appimage in dist/release/*.AppImage; do
             chmod +x "$appimage"
             APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" --version
@@ -248,8 +248,8 @@ jobs:
           - { arch: x86_64, runner: ubuntu-24.04 }
           - { arch: aarch64, runner: ubuntu-24.04-arm }
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -265,7 +265,7 @@ jobs:
           # Ubuntu 24.04's AppArmor blocks the unprivileged user namespaces bubblewrap needs.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Build the Flatpak bundle
-        run: packaging/linux/flatpak-bundle.sh "dist/linux/filmcraft-$FILMCRAFT_VERSION-linux-${{ matrix.arch }}.tar.gz"
+        run: packaging/linux/flatpak-bundle.sh "dist/linux/reelwright-$REELWRIGHT_VERSION-linux-${{ matrix.arch }}.tar.gz"
       - uses: actions/upload-artifact@v4
         with:
           name: release-flatpak-${{ matrix.arch }}
@@ -281,8 +281,8 @@ jobs:
     timeout-minutes: 180
     # No `environment: release`: this job signs nothing, so it gets no release secrets.
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Fonts (optional build input, required for releases): docs/contributing.md#building-with-craft-fonts
@@ -300,7 +300,7 @@ jobs:
           cpu: 4
           mem: 12288
           # Passed into the VM by name; never templated into the script below.
-          envs: "FILMCRAFT_VERSION FILMCRAFT_BUILD_DATE FILMCRAFT_BUILD_SHA INPUT_VERSION"
+          envs: "REELWRIGHT_VERSION REELWRIGHT_BUILD_DATE REELWRIGHT_BUILD_SHA INPUT_VERSION"
           # The FreeBSD CI packages (.github/workflows/freebsd.yml), plus bash for the script.
           prepare: |
             pkg install -y bash git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader gtk3 fontconfig freetype2 alsa-lib
@@ -311,13 +311,13 @@ jobs:
             git config --global --add safe.directory "$PWD"
             # Build outside the checkout so only dist/ is copied back out of the VM (copying the
             # target dir back fails on large builds). 4 jobs: more runs the VM out of memory.
-            export CARGO_TARGET_DIR=/var/tmp/filmcraft-target CARGO_BUILD_JOBS=4
-            if [ -n "$INPUT_VERSION" ]; then cargo xtask version set "$FILMCRAFT_VERSION"; fi
+            export CARGO_TARGET_DIR=/var/tmp/reelwright-target CARGO_BUILD_JOBS=4
+            if [ -n "$INPUT_VERSION" ]; then cargo xtask version set "$REELWRIGHT_VERSION"; fi
             # craft-fonts was checked out next to the sources and synced into the VM with them.
             export CRAFT_FONTS_DIR="$PWD/craft-fonts" CRAFT_FONTS_REQUIRED=1
             bash packaging/freebsd/package.sh
-            tar -tzf dist/release/filmcraft-*-freebsd-x86_64.tar.gz \
-              | grep -E '/bin/filmcraft$|/bin/filmcraft-cli$|/share/applications/ai\.storyteller\.filmcraft\.desktop$|/share/doc/filmcraft/LICENSE-MIT$'
+            tar -tzf dist/release/reelwright-*-freebsd-x86_64.tar.gz \
+              | grep -E '/bin/reelwright$|/bin/reelwright-cli$|/share/applications/online\.jonmcgee\.reelwright\.desktop$|/share/doc/reelwright/LICENSE-MIT$'
       - uses: actions/upload-artifact@v4
         with:
           name: release-freebsd-x86_64
@@ -330,8 +330,8 @@ jobs:
     runs-on: ubuntu-latest
     # No `environment: release`: this job signs nothing, so it gets no release secrets.
     env:
-      FILMCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      FILMCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      REELWRIGHT_VERSION: ${{ needs.version.outputs.version }}
+      REELWRIGHT_BUILD_DATE: ${{ needs.version.outputs.date }}
       WASM_BINDGEN_VERSION: 0.2.129
     steps:
       - uses: actions/checkout@v4
@@ -356,7 +356,7 @@ jobs:
           wasm-bindgen --version
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$FILMCRAFT_VERSION"
+        run: cargo xtask version set "$REELWRIGHT_VERSION"
       - name: Build and zip
         env:
           CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
@@ -394,7 +394,7 @@ jobs:
         working-directory: artifacts
         run: |
           tag="v$VERSION"
-          title="FilmCraft v$VERSION"
+          title="Reelwright v$VERSION"
           pre=()
           if [ "$PRERELEASE" = true ]; then pre=(--prerelease); fi
           if draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then

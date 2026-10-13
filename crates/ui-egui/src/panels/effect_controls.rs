@@ -3,23 +3,23 @@
 //! keyframe lane on the right. Also hosts the Lumetri Color panel body (same editor, grouped).
 
 use egui::{Align2, Color32, Pos2, Rect, Sense, Stroke, pos2, vec2};
-use filmcraft_project::{ClipId, EffectInstance, ParamKind, ParamValue, TrackItem};
-use filmcraft_time::Tick;
+use reelwright_project::{ClipId, EffectInstance, ParamKind, ParamValue, TrackItem};
+use reelwright_time::Tick;
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::icons::{self, Icon};
 use crate::theme::Tokens;
 
 const ROW_H: f32 = 22.0;
 
-fn selected_clip(app: &FilmcraftApp) -> Option<(ClipId, TrackItem, filmcraft_project::TrackKind)> {
+fn selected_clip(app: &ReelwrightApp) -> Option<(ClipId, TrackItem, reelwright_project::TrackKind)> {
     let seq = app.session.active_sequence()?;
     let mut best = None;
     for c in &app.session.state.selection {
         if let Some((tid, it)) = seq.find_item(*c) {
             let kind = seq.track(tid)?.kind;
-            if kind == filmcraft_project::TrackKind::Video {
+            if kind == reelwright_project::TrackKind::Video {
                 return Some((*c, it.clone(), kind));
             }
             best.get_or_insert((*c, it.clone(), kind));
@@ -28,7 +28,7 @@ fn selected_clip(app: &FilmcraftApp) -> Option<(ClipId, TrackItem, filmcraft_pro
     best
 }
 
-pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
+pub fn show(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let Some((clip, it, kind)) = selected_clip(app) else {
         crate::dock::placeholder(ui, rect, &t, "(no clip selected)");
@@ -76,7 +76,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let mut bui = ui.new_child(egui::UiBuilder::new().max_rect(body).id_salt("ec-body"));
     bui.set_clip_rect(Rect::from_min_max(body.min, pos2(rect.max.x, body.max.y)));
     let mt_now = it.source_time_at(ph.clamp(it.start, it.end() - Tick(1)));
-    let heading = if kind == filmcraft_project::TrackKind::Video { "Video" } else { "Audio" };
+    let heading = if kind == reelwright_project::TrackKind::Video { "Video" } else { "Audio" };
     bui.painter().text(pos2(body.min.x + 8.0, body.min.y + 8.0), Align2::LEFT_CENTER, heading, Tokens::semibold(11.5), t.text_dim);
     bui.add_space(18.0);
     // Premiere lists the fixed effects (Motion, Opacity, Time Remapping / Volume…) first.
@@ -167,13 +167,13 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let px = lx(ph);
     ui.painter().line_segment([pos2(px, lane.min.y), pos2(px, lane.max.y)], Stroke::new(1.0, t.playhead));
     // footer timecode
-    let tc = filmcraft_time::format_time(ph, seq.settings.frame_rate, seq.settings.drop_frame, filmcraft_time::TimeDisplay::Timecode, 48000);
+    let tc = reelwright_time::format_time(ph, seq.settings.frame_rate, seq.settings.drop_frame, reelwright_time::TimeDisplay::Timecode, 48000);
     ui.painter().text(pos2(rect.min.x + 10.0, rect.max.y - 13.0), Align2::LEFT_CENTER, tc, Tokens::mono(13.0), t.timecode);
     run(app, ui.ctx(), actions);
 }
 
 /// Premiere's "Custom Setup ▸ Edit…" row: opens the effect's Clip Fx Editor window.
-fn custom_setup_row(app: &mut FilmcraftApp, ui: &mut egui::Ui, body: Rect, clip: ClipId, idx: usize, effect: &str) {
+fn custom_setup_row(app: &mut ReelwrightApp, ui: &mut egui::Ui, body: Rect, clip: ClipId, idx: usize, effect: &str) {
     let t = app.tokens;
     let (r, _) = ui.allocate_exact_size(vec2(body.width(), ROW_H), Sense::hover());
     ui.painter().text(pos2(r.min.x + 42.0, r.center().y), Align2::LEFT_CENTER, "Custom Setup", Tokens::ui(12.0), t.text_dim);
@@ -188,20 +188,20 @@ fn custom_setup_row(app: &mut FilmcraftApp, ui: &mut egui::Ui, body: Rect, clip:
     }
 }
 
-fn seq_name(app: &FilmcraftApp) -> String {
+fn seq_name(app: &ReelwrightApp) -> String {
     app.session.state.active_sequence.and_then(|s| app.session.project.item(s)).map(|i| i.name.clone()).unwrap_or_default()
 }
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn param_row(
-    app: &mut FilmcraftApp,
+    app: &mut ReelwrightApp,
     ui: &mut egui::Ui,
     body: Rect,
     clip: ClipId,
     idx: usize,
     e: &EffectInstance,
     mask: Option<usize>,
-    pd: &filmcraft_project::ParamDef,
+    pd: &reelwright_project::ParamDef,
     mt: Tick,
     actions: &mut Vec<(String, Value)>,
     lane: &Rect,
@@ -393,10 +393,10 @@ pub(crate) fn param_row(
             let sel = k.time == mt || resp.dragged();
             let col = if sel { t.hot_text } else { Color32::from_rgb(0xb0, 0xb0, 0xb0) };
             match k.interp {
-                filmcraft_project::Interpolation::Hold => {
+                reelwright_project::Interpolation::Hold => {
                     ui.painter().rect_filled(Rect::from_center_size(kr.center(), vec2(8.0, 8.0)), 0.0, col);
                 }
-                filmcraft_project::Interpolation::Linear => icons::paint(ui.painter(), kr, Icon::Keyframe, col),
+                reelwright_project::Interpolation::Linear => icons::paint(ui.painter(), kr, Icon::Keyframe, col),
                 _ => {
                     ui.painter().circle_filled(kr.center(), 4.5, col);
                 }
@@ -452,7 +452,7 @@ pub(crate) fn param_row(
 }
 
 /// Lumetri Color panel: edits (or adds) the Lumetri effect on the selected clip, grouped by section.
-pub fn lumetri_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
+pub fn lumetri_panel(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let Some((clip, it, _)) = selected_clip(app) else {
         crate::dock::placeholder(ui, rect, &t, "Select a clip to grade");
@@ -528,7 +528,7 @@ pub fn lumetri_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
 }
 
 /// Properties panel (Premiere 26): a compact inspector for the selected clip.
-pub fn properties_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
+pub fn properties_panel(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let Some((clip, it, kind)) = selected_clip(app) else {
         crate::dock::placeholder(ui, rect, &t, "Select a clip to see its properties");
@@ -549,7 +549,7 @@ pub fn properties_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         ui.painter().text(pos2(r.min.x + 18.0, r.center().y), Align2::LEFT_CENTER, label, Tokens::ui(12.0), t.text_dim);
         r
     };
-    let section = |ui: &mut egui::Ui, app: &mut FilmcraftApp, name: &str, reset: Option<(usize, u64)>, actions: &mut Vec<(String, Value)>| -> bool {
+    let section = |ui: &mut egui::Ui, app: &mut ReelwrightApp, name: &str, reset: Option<(usize, u64)>, actions: &mut Vec<(String, Value)>| -> bool {
         ui.add_space(4.0);
         let key = format!("props:{name}");
         let open = !app.ui.collapsed_fx.contains(&key);
@@ -594,7 +594,7 @@ pub fn properties_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let eff_idx = |id: &str| it.effects.iter().position(|e| e.effect == id);
     let val = |eid: &str, p: &str| it.effect(eid).and_then(|e| e.param(p)).map(|p| p.value_at(mt));
     let anim = |eid: &str, p: &str| it.effect(eid).and_then(|e| e.param(p)).is_some_and(|p| p.is_animated());
-    if kind == filmcraft_project::TrackKind::Video {
+    if kind == reelwright_project::TrackKind::Video {
         if section(&mut bui, app, "Transform", eff_idx("motion").map(|i| (i, clip.0)), &mut actions) {
             for (label, p, unit, speed, range) in [
                 ("Position", "position", "", 1.0, (-100_000.0, 100_000.0)),
@@ -709,7 +709,7 @@ pub fn properties_panel(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
 /// one undo step, which the first change of each press begins (#201); typed values and clicks stay
 /// separate steps. A drag value only changes once the mouse moves, after the press frame, so the
 /// press that already began a step is remembered by its start time.
-fn run(app: &mut FilmcraftApp, ctx: &egui::Context, actions: Vec<(String, Value)>) {
+fn run(app: &mut ReelwrightApp, ctx: &egui::Context, actions: Vec<(String, Value)>) {
     let (down, press) = ctx.input(|i| (i.pointer.any_down(), i.pointer.press_start_time()));
     let key = egui::Id::new("effect-controls-drag-step");
     for (cmd, mut p) in actions {
@@ -733,14 +733,14 @@ pub(crate) fn graph_key(clip: ClipId, idx: usize, pid: &str) -> String {
 /// Keyframes drag vertically (value); Bezier influence handles drag horizontally.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn graph_rows(
-    app: &mut FilmcraftApp,
+    app: &mut ReelwrightApp,
     ui: &mut egui::Ui,
     body: Rect,
     clip: ClipId,
     idx: usize,
     mask: Option<usize>,
-    pd: &filmcraft_project::ParamDef,
-    param: &filmcraft_project::Param,
+    pd: &reelwright_project::ParamDef,
+    param: &reelwright_project::Param,
     lane: &Rect,
     it: &TrackItem,
     actions: &mut Vec<(String, Value)>,
@@ -796,7 +796,7 @@ pub(crate) fn graph_rows(
     let line: Vec<Pos2> = vals.iter().enumerate().map(|(i, v)| pos2(x_of(i as f32 / n as f32), y_of(*v))).collect();
     p.add(egui::Shape::line(line, Stroke::new(1.5, t.accent)));
     // velocity (units per second, derivative of the sampled value)
-    let secs = dur * speed / filmcraft_time::TICKS_PER_SECOND as f64 / n as f64;
+    let secs = dur * speed / reelwright_time::TICKS_PER_SECOND as f64 / n as f64;
     let vel: Vec<f64> = (0..n).map(|i| (vals[i + 1] - vals[i]) / secs.max(1e-9)).collect();
     let vmax = vel.iter().fold(1e-6f64, |a, v| a.max(v.abs())) * 1.15;
     let varea = Rect::from_min_max(pos2(lane.min.x, velr.min.y + 2.0), pos2(lane.max.x, velr.max.y - 4.0));
@@ -824,9 +824,9 @@ pub(crate) fn graph_rows(
         app.auto.add(&format!("effectControls.{}.graph.keyframe.{}", pd.id, k.time.0), r, "keyframe value");
         // influence handles: flat (ease) tangents with length ∝ influence × neighbouring segment
         let eases_out =
-            !matches!(k.interp, filmcraft_project::Interpolation::Linear | filmcraft_project::Interpolation::Hold | filmcraft_project::Interpolation::EaseIn);
+            !matches!(k.interp, reelwright_project::Interpolation::Linear | reelwright_project::Interpolation::Hold | reelwright_project::Interpolation::EaseIn);
         let eases_in =
-            !matches!(k.interp, filmcraft_project::Interpolation::Linear | filmcraft_project::Interpolation::Hold | filmcraft_project::Interpolation::EaseOut);
+            !matches!(k.interp, reelwright_project::Interpolation::Linear | reelwright_project::Interpolation::Hold | reelwright_project::Interpolation::EaseOut);
         for (side, on, nb) in [(1.0f32, eases_out, ks.get(i + 1)), (-1.0f32, eases_in && i > 0, if i > 0 { ks.get(i - 1) } else { None })] {
             let (true, Some(nb)) = (on, nb) else { continue };
             let seg = (x_of(to_f(nb.time)) - c.x).abs();
@@ -865,9 +865,9 @@ pub(crate) fn graph_rows(
 }
 
 /// Read-only text for parameters without an inline editor (LUT references, free text, curves).
-fn param_text(project: &filmcraft_project::Project, id: &str, value: &ParamValue) -> String {
+fn param_text(project: &reelwright_project::Project, id: &str, value: &ParamValue) -> String {
     match value {
-        ParamValue::Text(s) if id.ends_with("_lut") => filmcraft_render::luts::label(Some(project), s),
+        ParamValue::Text(s) if id.ends_with("_lut") => reelwright_render::luts::label(Some(project), s),
         ParamValue::Text(s) if s.is_empty() => "None".into(),
         ParamValue::Text(s) => s.clone(),
         ParamValue::Curve(pts) if pts.is_empty() || *pts == [[0.0, 0.0], [1.0, 1.0]] => "Default".into(),
@@ -882,7 +882,7 @@ mod param_text_tests {
 
     #[test]
     fn readable_values_for_text_lut_and_curve_params() {
-        let p = filmcraft_project::Project::default();
+        let p = reelwright_project::Project::default();
         assert_eq!(param_text(&p, "input_lut", &ParamValue::Text(String::new())), "None");
         assert_eq!(param_text(&p, "look_lut", &ParamValue::Text("builtin:look-teal-orange".into())), "Teal & Orange");
         assert_eq!(param_text(&p, "label", &ParamValue::Text(String::new())), "None");
@@ -901,21 +901,21 @@ mod drag_undo_tests {
     /// the same parameter are still two undo steps.
     #[test]
     fn each_press_begins_its_own_undo_step() {
-        let mut s = filmcraft_engine::Session::default();
+        let mut s = reelwright_engine::Session::default();
         s.execute("file.openDemoProject", json!({})).unwrap();
         let clip = s.active_sequence().unwrap().video_tracks[0].items[0].id.0;
-        let mut app = crate::FilmcraftApp::new(s);
+        let mut app = crate::ReelwrightApp::new(s);
         let ctx = egui::Context::default();
-        let opacity = |app: &crate::FilmcraftApp| {
+        let opacity = |app: &crate::ReelwrightApp| {
             let q = app.session.active_sequence().unwrap();
-            let it = q.find_item(filmcraft_project::ClipId(clip)).unwrap().1;
+            let it = q.find_item(reelwright_project::ClipId(clip)).unwrap().1;
             it.effects.iter().find(|e| e.effect == "opacity").unwrap().params["opacity"].value.as_f64().unwrap()
         };
         let start = opacity(&app);
         let pos = egui::pos2(10.0, 10.0);
         let button = |pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
         let mut time = 0.0;
-        let mut frame = |app: &mut crate::FilmcraftApp, events: Vec<egui::Event>, value: Option<f64>| {
+        let mut frame = |app: &mut crate::ReelwrightApp, events: Vec<egui::Event>, value: Option<f64>| {
             time += 0.1;
             let raw = egui::RawInput { time: Some(time), events, ..Default::default() };
             let mut out = ctx.run_ui(raw, |ui| {

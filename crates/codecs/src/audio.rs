@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use filmcraft_frame::{AudioBuffer, VideoFrame};
-use filmcraft_media::{AudioStreamInfo, FrameRequest, MediaError, MediaInfo, MediaKind, MediaSource, SharedSource};
-use filmcraft_time::Tick;
+use reelwright_frame::{AudioBuffer, VideoFrame};
+use reelwright_media::{AudioStreamInfo, FrameRequest, MediaError, MediaInfo, MediaKind, MediaSource, SharedSource};
+use reelwright_time::Tick;
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::{CODEC_TYPE_AAC, CODEC_TYPE_ALAC, CODEC_TYPE_FLAC, CODEC_TYPE_MP3, CodecParameters, CodecType, Decoder, DecoderOptions};
 use symphonia::core::formats::{FormatOptions, Packet};
@@ -16,16 +16,16 @@ use crate::{CodecError, Result};
 
 enum Inner {
     /// Our own AAC-LC decoder. `up` interpolates HE-AAC's core to the output rate (see [`Upsample2x`]).
-    Aac { dec: Box<filmcraft_aac::Decoder>, asc: Vec<u8>, up: Option<Box<Upsample2x>> },
+    Aac { dec: Box<reelwright_aac::Decoder>, asc: Vec<u8>, up: Option<Box<Upsample2x>> },
     /// AAC whose configuration arrives with the first frame (ADTS / LATM).
     AacPending,
     /// Our own Opus decoder (always 48 kHz output; pre-skip is left to container timestamps).
     /// `order` maps output channel → decoded channel (Vorbis → WAV/SMPTE order for surround).
-    Opus { dec: Box<filmcraft_opus::Decoder>, order: Option<&'static [usize]> },
+    Opus { dec: Box<reelwright_opus::Decoder>, order: Option<&'static [usize]> },
     /// Bootstrap decoders (MP3, ALAC, FLAC, HE-AAC…) via symphonia.
     Symphonia(Box<dyn Decoder>),
     /// Our AC-3 decoder (ATSC A/52).
-    Ac3(Box<filmcraft_ac3::Decoder>),
+    Ac3(Box<reelwright_ac3::Decoder>),
 }
 
 /// Opus always decodes at 48 kHz (RFC 7845 §5.1: the input rate in the header is informational).
@@ -56,7 +56,7 @@ fn vorbis_to_wav_order(channels: usize) -> Option<&'static [usize]> {
 /// without parsing frame lengths. For a multistream packet this is the first stream's TOC, which
 /// every stream shares. `None` for an empty or invalid (> 120 ms) packet.
 pub fn opus_packet_samples(data: &[u8]) -> Option<usize> {
-    let toc = filmcraft_opus::Toc::parse(*data.first()?);
+    let toc = reelwright_opus::Toc::parse(*data.first()?);
     let frames = match data[0] & 3 {
         0 => 1,
         1 | 2 => 2,
@@ -86,7 +86,7 @@ impl PacketDecoder {
     /// object types. `sample_rate` is the stream's output rate: when it is twice the core rate
     /// (HE-AAC, see [`aac_output_rate`]) the decoded core is upsampled to it.
     pub fn aac(asc: &[u8], sample_rate: u32) -> Result<Self> {
-        if let Ok(dec) = filmcraft_aac::Decoder::new(asc) {
+        if let Ok(dec) = reelwright_aac::Decoder::new(asc) {
             let up = (dec.sample_rate().checked_mul(2) == Some(sample_rate)).then(|| Box::new(Upsample2x::new(dec.channels())));
             return Ok(Self { inner: Inner::Aac { dec: Box::new(dec), asc: asc.to_vec(), up }, channels: 0 });
         }
@@ -94,8 +94,8 @@ impl PacketDecoder {
     }
     /// Opus from an `OpusHead` (Matroska `CodecPrivate`, Ogg) or a `dOps` box payload. Output is
     /// 48 kHz; pre-skip is *not* trimmed here (Matroska `CodecDelay` / MP4 edit lists do that).
-    pub fn opus(head: filmcraft_opus::OpusHead) -> Result<Self> {
-        let dec = filmcraft_opus::Decoder::from_head(head, OPUS_RATE).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?;
+    pub fn opus(head: reelwright_opus::OpusHead) -> Result<Self> {
+        let dec = reelwright_opus::Decoder::from_head(head, OPUS_RATE).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?;
         let channels = dec.channels();
         let order = if dec.head().mapping_family == 1 { vorbis_to_wav_order(channels) } else { None };
         Ok(Self { inner: Inner::Opus { dec: Box::new(dec), order }, channels })
@@ -120,27 +120,27 @@ impl PacketDecoder {
         {
             return Ok(());
         }
-        let dec = filmcraft_aac::Decoder::new(asc).map_err(|e| CodecError::Unsupported(format!("AAC: {e}")))?;
+        let dec = reelwright_aac::Decoder::new(asc).map_err(|e| CodecError::Unsupported(format!("AAC: {e}")))?;
         self.inner = Inner::Aac { dec: Box::new(dec), asc: asc.to_vec(), up: None };
         Ok(())
     }
     /// AC-3 (ATSC A/52).
     pub fn ac3() -> Result<Self> {
-        Ok(Self { inner: Inner::Ac3(Box::new(filmcraft_ac3::Decoder::new())), channels: 0 })
+        Ok(Self { inner: Inner::Ac3(Box::new(reelwright_ac3::Decoder::new())), channels: 0 })
     }
     /// Whether this decodes Opus (which needs [`OPUS_PRE_ROLL`] of pre-roll after a seek).
     pub fn is_opus(&self) -> bool {
         matches!(self.inner, Inner::Opus { .. })
     }
-    pub fn for_isobmff(c: &filmcraft_isobmff::CodecConfig, rate: u32) -> Result<Self> {
-        use filmcraft_isobmff::CodecConfig as C;
+    pub fn for_isobmff(c: &reelwright_isobmff::CodecConfig, rate: u32) -> Result<Self> {
+        use reelwright_isobmff::CodecConfig as C;
         match c {
             C::Aac(a) => Self::aac(&a.asc, if rate > 0 { rate } else { a.sample_rate }),
             C::Mp3 => Self::new(CODEC_TYPE_MP3, rate, None),
             C::Ac3 { .. } => Self::ac3(),
             C::Alac { cookie } => Self::new(CODEC_TYPE_ALAC, rate, Some(cookie.clone())),
             C::Flac(_) => Self::new(CODEC_TYPE_FLAC, rate, None),
-            C::Opus(o) => Self::opus(filmcraft_opus::OpusHead::from_dops(&o.to_bytes()).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?),
+            C::Opus(o) => Self::opus(reelwright_opus::OpusHead::from_dops(&o.to_bytes()).map_err(|e| CodecError::Unsupported(format!("Opus: {e}")))?),
             other => Err(CodecError::Unsupported(format!("{} audio", other.name()))),
         }
     }
@@ -208,7 +208,7 @@ impl PacketDecoder {
     pub fn reset(&mut self) {
         match &mut self.inner {
             Inner::Aac { dec, asc, up } => {
-                if let Ok(d) = filmcraft_aac::Decoder::new(asc) {
+                if let Ok(d) = reelwright_aac::Decoder::new(asc) {
                     **dec = d;
                 }
                 if let Some(up) = up {
@@ -228,7 +228,7 @@ impl PacketDecoder {
 /// AAC-LC config at 24 kHz or less) SBR is only visible as fill-element data in the access units,
 /// so the first ones are decoded to look for it. `None` if `asc` is not one our decoder reads.
 pub fn aac_output_rate<'a>(asc: &[u8], first_units: impl IntoIterator<Item = &'a [u8]>) -> Option<u32> {
-    let mut dec = filmcraft_aac::Decoder::new(asc).ok()?;
+    let mut dec = reelwright_aac::Decoder::new(asc).ok()?;
     let core = dec.sample_rate();
     if let Some(ext) = dec.config().extension_sample_rate {
         return Some(ext);
@@ -351,13 +351,13 @@ pub struct LatmConfig {
 
 const AAC_RATES: [u32; 13] = [96_000, 88_200, 64_000, 48_000, 44_100, 32_000, 24_000, 22_050, 16_000, 12_000, 11_025, 8_000, 7_350];
 
-fn latm_value(r: &mut filmcraft_bitstream::BitReader) -> Option<u32> {
+fn latm_value(r: &mut reelwright_bitstream::BitReader) -> Option<u32> {
     let n = r.read_bits(2).ok()? + 1;
     r.read_bits(8 * n).ok()
 }
 
 /// StreamMuxConfig after `audioMuxVersion`, leaving the reader after it.
-fn stream_mux_config(r: &mut filmcraft_bitstream::BitReader) -> Option<LatmConfig> {
+fn stream_mux_config(r: &mut reelwright_bitstream::BitReader) -> Option<LatmConfig> {
     let version = r.read_bits(1).ok()?;
     let version_a = if version == 1 { r.read_bits(1).ok()? } else { 0 };
     if version_a != 0 {
@@ -420,7 +420,7 @@ pub fn latm_config(frame: &[u8]) -> Option<LatmConfig> {
     if frame.len() < 4 || frame[0] != 0x56 || frame[1] & 0xE0 != 0xE0 {
         return None;
     }
-    let mut r = filmcraft_bitstream::BitReader::new(&frame[3..]);
+    let mut r = reelwright_bitstream::BitReader::new(&frame[3..]);
     if r.read_bits(1).ok()? == 1 {
         return None; // useSameStreamMux
     }
@@ -434,7 +434,7 @@ pub fn latm_split(frame: &[u8], last: &mut Option<LatmConfig>) -> Option<(Vec<u8
     if frame.len() < 4 || frame[0] != 0x56 || frame[1] & 0xE0 != 0xE0 {
         return None;
     }
-    let mut r = filmcraft_bitstream::BitReader::new(&frame[3..]);
+    let mut r = reelwright_bitstream::BitReader::new(&frame[3..]);
     let same = r.read_bits(1).ok()? == 1;
     let cfg = if same {
         last.clone()?
@@ -554,7 +554,7 @@ pub fn decode_dvd_lpcm(data: &[u8], channels: usize, bits: u32) -> Vec<Vec<f32>>
 }
 
 /// Decode interleaved PCM bytes into planar f32.
-pub fn decode_pcm(data: &[u8], cfg: &filmcraft_isobmff::PcmConfig) -> Vec<Vec<f32>> {
+pub fn decode_pcm(data: &[u8], cfg: &reelwright_isobmff::PcmConfig) -> Vec<Vec<f32>> {
     let ch = cfg.channels.max(1) as usize;
     let bps = (cfg.bits as usize).div_ceil(8);
     let n = data.len() / (bps * ch);

@@ -1,7 +1,7 @@
 //! Interface translations. Command ids, document text and file names remain stable.
 //! Untranslated labels fall back to English so coverage can grow incrementally.
 //!
-//! Japanese text uses the Japanese craft-fonts when FilmCraft was built with them (`CRAFT_FONTS_DIR`;
+//! Japanese text uses the Japanese craft-fonts when Reelwright was built with them (`CRAFT_FONTS_DIR`;
 //! `theme::install` already puts them in every font family, see [`craft_japanese_font`]), otherwise
 //! a font already installed on the system ([`system_japanese_font`]); with neither, switching to
 //! Japanese is refused with a message.
@@ -95,11 +95,11 @@ const JAPANESE_FONT: &str = "system-japanese";
 pub fn system_japanese_font() -> Option<Arc<egui::FontData>> {
     static FONT: OnceLock<Option<Arc<egui::FontData>>> = OnceLock::new();
     FONT.get_or_init(|| {
-        filmcraft_text::fonts::scan_system();
-        let faces: Vec<_> = filmcraft_text::fonts::all_faces().into_iter().filter(|f| f.info.origin == "system" && !f.info.italic).collect();
-        let covers = |f: &filmcraft_text::fonts::Face| JAPANESE_SAMPLE.chars().all(|c| f.has_char(c));
+        reelwright_text::fonts::scan_system();
+        let faces: Vec<_> = reelwright_text::fonts::all_faces().into_iter().filter(|f| f.info.origin == "system" && !f.info.italic).collect();
+        let covers = |f: &reelwright_text::fonts::Face| JAPANESE_SAMPLE.chars().all(|c| f.has_char(c));
         // within a family, the face closest to regular weight
-        let by_weight = |f: &&Arc<filmcraft_text::fonts::Face>| f.info.weight.abs_diff(400);
+        let by_weight = |f: &&Arc<reelwright_text::fonts::Face>| f.info.weight.abs_diff(400);
         let preferred =
             PREFERRED_JAPANESE.iter().find_map(|name| faces.iter().filter(|f| f.info.family.eq_ignore_ascii_case(name) && covers(f)).min_by_key(by_weight));
         let face = preferred.or_else(|| faces.iter().filter(|f| covers(f)).min_by_key(by_weight))?;
@@ -115,10 +115,10 @@ pub fn system_japanese_font() -> Option<Arc<egui::FontData>> {
 /// Japanese interface font: some craft-fonts face covers [`JAPANESE_SAMPLE`]. `theme::install` adds
 /// these faces to every font family, so nothing else needs installing (and no system scan runs).
 pub fn craft_japanese_font() -> bool {
-    filmcraft_text::fonts::craft_japanese().next().is_some()
-        && filmcraft_text::fonts::all_faces()
+    reelwright_text::fonts::craft_japanese().next().is_some()
+        && reelwright_text::fonts::all_faces()
             .iter()
-            .any(|f| f.info.origin == filmcraft_text::fonts::CRAFT_ORIGIN && JAPANESE_SAMPLE.chars().all(|c| f.has_char(c)))
+            .any(|f| f.info.origin == reelwright_text::fonts::CRAFT_ORIGIN && JAPANESE_SAMPLE.chars().all(|c| f.has_char(c)))
 }
 
 /// Japanese for the interface: true when built with the craft-fonts (already installed by
@@ -140,7 +140,7 @@ pub fn install_japanese_font(ctx: &egui::Context) -> bool {
 }
 
 const SPANISH: &[(&str, &str)] = &[
-    ("About FilmCraft", "Acerca de FilmCraft"),
+    ("About Reelwright", "Acerca de Reelwright"),
     ("Add Audio Submix Track", "Añadir pista de submezcla de audio"),
     ("Add Caption at Playhead", "Añadir subtítulo en el cabezal"),
     ("Add Chapter Marker…", "Añadir marcador de capítulo…"),
@@ -166,7 +166,6 @@ const SPANISH: &[(&str, &str)] = &[
     ("Apply Default Transitions to Selection", "Aplicar transiciones predeterminadas a la selección"),
     ("Apply Video Transition", "Aplicar transición de video"),
     ("Arrange", "Organizar"),
-    ("ArtCraft Website", "Sitio web de ArtCraft"),
     ("Assembly", "Ensamblaje"),
     ("Attach Proxies…", "Adjuntar proxies…"),
     ("Audio Channels…", "Canales de audio…"),
@@ -198,6 +197,7 @@ const SPANISH: &[(&str, &str)] = &[
     ("Center Horizontally", "Centrar horizontalmente"),
     ("Center Vertically", "Centrar verticalmente"),
     ("Cerulean", "Cerúleo"),
+    ("Check Caption Readability…", "Comprobar la legibilidad de los subtítulos…"),
     ("Clear", "Borrar"),
     ("Clear Guides", "Borrar guías"),
     ("Clear In", "Borrar entrada"),
@@ -241,6 +241,7 @@ const SPANISH: &[(&str, &str)] = &[
     ("Edit", "Edición"),
     ("Edit Offline…", "Editar sin conexión…"),
     ("Edit Original", "Editar original"),
+    ("Edit Statistics…", "Estadísticas de edición…"),
     ("Edit Subclip…", "Editar subclip…"),
     ("Editing", "Edición"),
     ("Effect Controls", "Controles de efectos"),
@@ -253,15 +254,17 @@ const SPANISH: &[(&str, &str)] = &[
     ("Events", "Eventos"),
     ("Export", "Exportar"),
     ("Export As Motion Graphics Template…", "Exportar como plantilla de animación…"),
+    ("Export Chapter List…", "Exportar lista de capítulos…"),
     ("Extract", "Extraer"),
     ("Extract Audio", "Extraer audio"),
     ("Field Options…", "Opciones de campo…"),
     ("File", "Archivo"),
     ("File…", "Archivo…"),
     ("Fill frame", "Rellenar fotograma"),
-    ("FilmCraft Help…", "Ayuda de FilmCraft…"),
-    ("FilmCraft on GitHub", "FilmCraft en GitHub"),
-    ("FilmCraft on getartcraft.com", "FilmCraft en getartcraft.com"),
+    ("Reelwright Help…", "Ayuda de Reelwright…"),
+    ("Reelwright on GitHub", "Reelwright en GitHub"),
+    ("Reelwright Website", "Sitio web de Reelwright"),
+    ("Based on FilmCraft…", "Basado en FilmCraft…"),
     ("Find Next", "Buscar siguiente"),
     ("Find…", "Buscar…"),
     ("Fit", "Ajustar"),
@@ -305,7 +308,6 @@ const SPANISH: &[(&str, &str)] = &[
     ("Insert Frame Hold Segment", "Insertar segmento de fotograma congelado"),
     ("Install Motion Graphics Template…", "Instalar plantilla de animación…"),
     ("Interpret Footage…", "Interpretar material…"),
-    ("Join the ArtCraft Discord…", "Únete al Discord de ArtCraft…"),
     ("Keyboard Shortcuts…", "Atajos de teclado…"),
     ("Label", "Etiqueta"),
     ("Labels…", "Etiquetas…"),
@@ -429,7 +431,7 @@ const SPANISH: &[(&str, &str)] = &[
     ("Select Previous Graphic", "Seleccionar gráfico anterior"),
     ("Select Previous Layer", "Seleccionar capa anterior"),
     ("Selection Follows Playhead", "La selección sigue al cabezal"),
-    ("Selection as FilmCraft Project…", "Selección como proyecto de FilmCraft…"),
+    ("Selection as Reelwright Project…", "Selección como proyecto de Reelwright…"),
     ("Selection…", "Selección…"),
     ("Send Backward", "Enviar atrás"),
     ("Send to Back", "Enviar al fondo"),
@@ -490,7 +492,7 @@ const SPANISH: &[(&str, &str)] = &[
 ];
 
 const PORTUGUESE: &[(&str, &str)] = &[
-    ("About FilmCraft", "Sobre o FilmCraft"),
+    ("About Reelwright", "Sobre o Reelwright"),
     ("Add Audio Submix Track", "Adicionar faixa de submixagem de áudio"),
     ("Add Caption at Playhead", "Adicionar legenda no cursor de reprodução"),
     ("Add Chapter Marker…", "Adicionar marcador de capítulo…"),
@@ -516,7 +518,6 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Apply Default Transitions to Selection", "Aplicar transições padrão à seleção"),
     ("Apply Video Transition", "Aplicar transição de vídeo"),
     ("Arrange", "Organizar"),
-    ("ArtCraft Website", "Site do ArtCraft"),
     ("Assembly", "Montagem"),
     ("Attach Proxies…", "Anexar proxies…"),
     ("Audio Channels…", "Canais de áudio…"),
@@ -548,6 +549,7 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Center Horizontally", "Centralizar horizontalmente"),
     ("Center Vertically", "Centralizar verticalmente"),
     ("Cerulean", "Cerúleo"),
+    ("Check Caption Readability…", "Verificar a legibilidade das legendas…"),
     ("Clear", "Limpar"),
     ("Clear Guides", "Limpar guias"),
     ("Clear In", "Limpar entrada"),
@@ -591,6 +593,7 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Edit", "Editar"),
     ("Edit Offline…", "Editar offline…"),
     ("Edit Original", "Editar original"),
+    ("Edit Statistics…", "Estatísticas de edição…"),
     ("Edit Subclip…", "Editar subclipe…"),
     ("Editing", "Edição"),
     ("Effect Controls", "Controles de efeito"),
@@ -603,15 +606,17 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Events", "Eventos"),
     ("Export", "Exportar"),
     ("Export As Motion Graphics Template…", "Exportar como modelo de gráficos de movimento…"),
+    ("Export Chapter List…", "Exportar lista de capítulos…"),
     ("Extract", "Extrair"),
     ("Extract Audio", "Extrair áudio"),
     ("Field Options…", "Opções de campo…"),
     ("File", "Arquivo"),
     ("File…", "Arquivo…"),
     ("Fill frame", "Preencher quadro"),
-    ("FilmCraft Help…", "Ajuda do FilmCraft…"),
-    ("FilmCraft on GitHub", "FilmCraft no GitHub"),
-    ("FilmCraft on getartcraft.com", "FilmCraft no getartcraft.com"),
+    ("Reelwright Help…", "Ajuda do Reelwright…"),
+    ("Reelwright on GitHub", "Reelwright no GitHub"),
+    ("Reelwright Website", "Site do Reelwright"),
+    ("Based on FilmCraft…", "Baseado no FilmCraft…"),
     ("Find Next", "Localizar próximo"),
     ("Find…", "Localizar…"),
     ("Fit", "Ajustar"),
@@ -655,7 +660,6 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Insert Frame Hold Segment", "Inserir segmento de quadro congelado"),
     ("Install Motion Graphics Template…", "Instalar modelo de gráficos de movimento…"),
     ("Interpret Footage…", "Interpretar clipes…"),
-    ("Join the ArtCraft Discord…", "Entre no Discord do ArtCraft…"),
     ("Keyboard Shortcuts…", "Atalhos de teclado…"),
     ("Label", "Rótulo"),
     ("Labels…", "Rótulos…"),
@@ -779,7 +783,7 @@ const PORTUGUESE: &[(&str, &str)] = &[
     ("Select Previous Graphic", "Selecionar gráfico anterior"),
     ("Select Previous Layer", "Selecionar camada anterior"),
     ("Selection Follows Playhead", "A seleção segue o cursor de reprodução"),
-    ("Selection as FilmCraft Project…", "Seleção como projeto do FilmCraft…"),
+    ("Selection as Reelwright Project…", "Seleção como projeto do Reelwright…"),
     ("Selection…", "Seleção…"),
     ("Send Backward", "Enviar para trás"),
     ("Send to Back", "Enviar para o fundo"),
@@ -840,6 +844,9 @@ const PORTUGUESE: &[(&str, &str)] = &[
 ];
 
 const JAPANESE: &[(&str, &str)] = &[
+    ("Check Caption Readability…", "キャプションの読みやすさを確認…"),
+    ("Edit Statistics…", "編集の統計…"),
+    ("Export Chapter List…", "チャプターリストを書き出し…"),
     ("Type Tool", "文字ツール"),
     ("Vertical Type Tool", "縦書き文字ツール"),
     ("Clip", "クリップ"),
@@ -971,7 +978,7 @@ mod tests {
     #[test]
     fn spanish_and_portuguese_entries_are_menu_labels() {
         // a renamed command would otherwise leave a dead entry and an untranslated menu item
-        let app = crate::FilmcraftApp::new(filmcraft_engine::Session::default());
+        let app = crate::ReelwrightApp::new(reelwright_engine::Session::default());
         let items = crate::menus::menu_items(&app);
         let known = |text: &str| crate::menus::MENUS.contains(&text) || items.iter().any(|it| it.label == text || it.path.iter().any(|p| p == text));
         for (en, _) in SPANISH {
@@ -987,7 +994,7 @@ mod tests {
 
     #[test]
     fn language_commands_switch_and_persist_without_a_document() {
-        let mut app = crate::FilmcraftApp::new(filmcraft_engine::Session::default());
+        let mut app = crate::ReelwrightApp::new(reelwright_engine::Session::default());
         let ctx = egui::Context::default();
         crate::menus::invoke(&mut app, &ctx, "app.language.japanese", serde_json::json!({})).unwrap();
         assert_eq!(app.ui.language, Language::Ja);
@@ -1010,7 +1017,7 @@ mod tests {
 
     #[test]
     fn japanese_needs_an_installed_font() {
-        let mut app = crate::FilmcraftApp::new(filmcraft_engine::Session::default());
+        let mut app = crate::ReelwrightApp::new(reelwright_engine::Session::default());
         let ctx = egui::Context::default();
         crate::theme::install(&ctx, &crate::theme::Tokens::for_kind(crate::theme::ThemeKind::default()));
         let r = crate::menus::invoke(&mut app, &ctx, "app.language.japanese", serde_json::json!({}));

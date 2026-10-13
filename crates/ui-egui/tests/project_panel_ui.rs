@@ -4,7 +4,7 @@
 //! bins opened in place / in a tab / in a window, and the Media Browser (navigation, Favorites,
 //! Edit Columns…, import, drag to the Project panel, Open In Source Monitor).
 //!
-//! Set `FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` to also render offscreen with wgpu and write
+//! Set `REELWRIGHT_UI_SNAPSHOT_DIR=<dir>` to also render offscreen with wgpu and write
 //! `project-*.png` / `media-browser-*.png`.
 
 #![allow(dead_code)]
@@ -12,15 +12,15 @@
 use std::sync::mpsc::{Sender, channel};
 
 use egui_kittest::Harness;
-use filmcraft_engine::Session;
-use filmcraft_engine::project_panel::{FREEFORM_POS, FREEFORM_STACK, ViewMode};
-use filmcraft_project::{BinEntry, ItemId};
-use filmcraft_ui_egui::FilmcraftApp;
-use filmcraft_ui_egui::control::ControlRequest;
+use reelwright_engine::Session;
+use reelwright_engine::project_panel::{FREEFORM_POS, FREEFORM_STACK, ViewMode};
+use reelwright_project::{BinEntry, ItemId};
+use reelwright_ui_egui::ReelwrightApp;
+use reelwright_ui_egui::control::ControlRequest;
 use serde_json::{Value, json};
 
 struct Driver {
-    harness: Harness<'static, FilmcraftApp>,
+    harness: Harness<'static, ReelwrightApp>,
     tx: Sender<ControlRequest>,
     snapshots: Option<std::path::PathBuf>,
 }
@@ -28,8 +28,8 @@ struct Driver {
 impl Driver {
     fn with(session: Session) -> Self {
         let (tx, rx) = channel();
-        let app = FilmcraftApp::new(session).with_control(rx);
-        let snapshots = std::env::var_os("FILMCRAFT_UI_SNAPSHOT_DIR").map(std::path::PathBuf::from);
+        let app = ReelwrightApp::new(session).with_control(rx);
+        let snapshots = std::env::var_os("REELWRIGHT_UI_SNAPSHOT_DIR").map(std::path::PathBuf::from);
         let mut b = Harness::builder().with_size(egui::vec2(1600.0, 980.0)).with_max_steps(10_000);
         if snapshots.is_some() {
             b = b.wgpu();
@@ -121,7 +121,7 @@ impl Driver {
         self.frames(2);
     }
 
-    fn app(&mut self) -> &mut FilmcraftApp {
+    fn app(&mut self) -> &mut ReelwrightApp {
         self.harness.state_mut()
     }
 
@@ -302,7 +302,7 @@ fn freeform_view_places_and_stacks_cards() {
     d.ok("ui.drag", json!({"from": {"x": from.0, "y": from.1}, "to": {"x": to.0, "y": to.1}, "steps": 16}));
     d.frames(4);
     let pos = d.app().session.project.item(ItemId(items[0])).unwrap().metadata.get(FREEFORM_POS).cloned().expect("card placed");
-    let (x, y, _) = filmcraft_engine::project_panel::parse_pos(&pos).unwrap();
+    let (x, y, _) = reelwright_engine::project_panel::parse_pos(&pos).unwrap();
     let (ex, ey) = (r[0] - canvas[0] + 140.0, r[1] - canvas[1] + 90.0);
     assert!((x - ex).abs() < 4.0 && (y - ey).abs() < 4.0, "placed at {x},{y}, expected {ex},{ey}");
     d.frames(2);
@@ -360,7 +360,7 @@ fn metadata_display_dialog_and_view_presets() {
     }
     d.click("project.menu.metadataDisplay");
     d.frames(4);
-    assert!(matches!(d.app().ui.project_panel.dialog, Some(filmcraft_ui_egui::panels::project::ProjectDialog::MetadataDisplay { .. })));
+    assert!(matches!(d.app().ui.project_panel.dialog, Some(reelwright_ui_egui::panels::project::ProjectDialog::MetadataDisplay { .. })));
     d.click("projectDialog.field.Label");
     // fields further down: narrow the list with the search box
     d.click("projectDialog.filter");
@@ -443,7 +443,7 @@ fn bins_open_in_place_in_a_tab_or_in_a_window() {
     d.key("Cmd+A");
     d.ok("ui.type", json!({"text": "Camera A"}));
     d.key("Enter");
-    let name = d.app().session.project.root.find_bin(filmcraft_project::BinId(bin)).unwrap().name.clone();
+    let name = d.app().session.project.root.find_bin(reelwright_project::BinId(bin)).unwrap().name.clone();
     assert_eq!(name, "Camera A");
 }
 
@@ -483,7 +483,7 @@ fn media_dir(tag: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("fc-mb-ui-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("Selects")).unwrap();
-    let wav = filmcraft_media::wav::write_wav16(&[0.0; 9600], 2, 48_000);
+    let wav = reelwright_media::wav::write_wav16(&[0.0; 9600], 2, 48_000);
     for n in ["a-interview.wav", "b-roll.wav"] {
         std::fs::write(dir.join(n), &wav).unwrap();
     }

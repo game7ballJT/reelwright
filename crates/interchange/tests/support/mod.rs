@@ -1,19 +1,19 @@
 //! Test helpers: building projects and comparing edit structure.
 #![allow(dead_code)]
 
-use filmcraft_interchange::{ExportOptions, Format, Imported, Report, export, import};
-use filmcraft_media::{Generator, MediaKind};
-use filmcraft_project::{
+use reelwright_interchange::{ExportOptions, Format, Imported, Report, export, import};
+use reelwright_media::{Generator, MediaKind};
+use reelwright_project::{
     ClipId, ItemId, ItemKind, Label, MediaClip, MediaRef, Project, SequenceSettings, TrackKind, Transition, TransitionAlign, TransitionId, find_effect,
 };
-use filmcraft_time::{FrameRate, Tick, TimeRange};
+use reelwright_time::{FrameRate, Tick, TimeRange};
 
-pub fn media_info(name: &str, video: bool, audio: bool, rate: FrameRate, secs: i64) -> filmcraft_media::MediaInfo {
-    filmcraft_media::MediaInfo {
+pub fn media_info(name: &str, video: bool, audio: bool, rate: FrameRate, secs: i64) -> reelwright_media::MediaInfo {
+    reelwright_media::MediaInfo {
         name: name.into(),
         kind: if video { MediaKind::Movie } else { MediaKind::AudioOnly },
-        duration: Tick(secs * filmcraft_time::TICKS_PER_SECOND),
-        video: video.then(|| filmcraft_media::VideoStreamInfo {
+        duration: Tick(secs * reelwright_time::TICKS_PER_SECOND),
+        video: video.then(|| reelwright_media::VideoStreamInfo {
             width: 1920,
             height: 1080,
             frame_rate: rate,
@@ -25,7 +25,7 @@ pub fn media_info(name: &str, video: bool, audio: bool, rate: FrameRate, secs: i
             bitrate: None,
             hdr: None,
         }),
-        audio: audio.then(|| filmcraft_media::AudioStreamInfo { sample_rate: 48_000, channels: 2, codec: "aac".into(), bits_per_sample: None }),
+        audio: audio.then(|| reelwright_media::AudioStreamInfo { sample_rate: 48_000, channels: 2, codec: "aac".into(), bits_per_sample: None }),
         container: "mp4".into(),
         start_timecode: None,
         file_size: None,

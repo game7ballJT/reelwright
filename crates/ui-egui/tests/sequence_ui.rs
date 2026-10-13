@@ -1,17 +1,17 @@
 //! Headless UI tests of the Sequence / Markers menu additions: the Add Tracks and Delete Tracks dialogs, the
 //! through-edit marks on the timeline, the Markers panel colour filter and the Shift+; gap key.
-//! The real `FilmcraftApp` under `egui_kittest`, driven over the control channel by automation id.
+//! The real `ReelwrightApp` under `egui_kittest`, driven over the control channel by automation id.
 
 use std::sync::mpsc::{Sender, channel};
 
 use egui_kittest::Harness;
-use filmcraft_engine::Session;
-use filmcraft_ui_egui::FilmcraftApp;
-use filmcraft_ui_egui::control::ControlRequest;
+use reelwright_engine::Session;
+use reelwright_ui_egui::ReelwrightApp;
+use reelwright_ui_egui::control::ControlRequest;
 use serde_json::{Value, json};
 
 struct Driver {
-    harness: Harness<'static, FilmcraftApp>,
+    harness: Harness<'static, ReelwrightApp>,
     tx: Sender<ControlRequest>,
 }
 
@@ -20,7 +20,7 @@ impl Driver {
         let mut session = Session::default();
         session.execute("file.openDemoProject", json!({})).expect("demo project");
         let (tx, rx) = channel();
-        let app = FilmcraftApp::new(session).with_control(rx);
+        let app = ReelwrightApp::new(session).with_control(rx);
         let harness = Harness::builder().with_size(egui::vec2(1600.0, 980.0)).with_max_steps(10_000).build_eframe(move |_cc| app);
         let mut d = Driver { harness, tx };
         d.frames(4);
@@ -64,7 +64,7 @@ impl Driver {
         self.frames(2);
     }
 
-    fn app(&mut self) -> &mut FilmcraftApp {
+    fn app(&mut self) -> &mut ReelwrightApp {
         self.harness.state_mut()
     }
 
@@ -137,7 +137,7 @@ fn add_tracks_dialog_offers_amount_placement_and_type() {
     let [v, a, s] = d.tracks();
     assert_eq!((v.len(), a.len(), s.len()), (4, 4, 0));
     assert_eq!((v[3].as_str(), a[3].as_str()), ("Video 4", "Audio 4"));
-    assert_eq!(d.app().session.active_sequence().unwrap().audio_tracks[3].channels, filmcraft_engine::project::AudioChannels::Stereo);
+    assert_eq!(d.app().session.active_sequence().unwrap().audio_tracks[3].channels, reelwright_engine::project::AudioChannels::Stereo);
     // one undo step for the whole dialog
     d.exec("edit.undo", json!({}));
     assert_eq!(d.tracks(), before);
@@ -187,7 +187,7 @@ fn add_tracks_dialog_places_and_types_the_new_tracks() {
     let q = d.app().session.active_sequence().unwrap().clone();
     assert!(q.video_tracks[1].items.is_empty() && q.video_tracks[2].items.is_empty(), "the new tracks are after Video 1");
     assert_eq!(q.video_tracks[3].items[0].id, on_v2, "what was on Video 2 moved up to Video 4");
-    use filmcraft_engine::project::AudioChannels;
+    use reelwright_engine::project::AudioChannels;
     assert_eq!((q.audio_tracks[0].channels, q.audio_tracks[0].items.len()), (AudioChannels::Mono, 0));
     assert_eq!(q.submix_tracks[0].channels, AudioChannels::Surround51);
 

@@ -5,3 +5,6 @@ plan/
 /log
 .DS_Store
 .claude/worktrees/
+
+# render previews the editor writes next to a project
+Reelwright Previews/

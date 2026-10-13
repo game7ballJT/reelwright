@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use filmcraft_project::{ItemId, ItemKind, MediaRef, Param, ParamValue, TrackKind};
-use filmcraft_time::FrameRate;
+use reelwright_project::{ItemId, ItemKind, MediaRef, Param, ParamValue, TrackKind};
+use reelwright_time::FrameRate;
 use serde_json::json;
 
 use crate::Session;
@@ -14,8 +14,8 @@ fn setup(name: &str) -> (Session, Vec<ItemId>, ItemId, std::path::PathBuf) {
     let dir = tmp_dir(name);
     let a = dir.join("a.mov");
     let b = dir.join("b.mov");
-    make_movie(&a, filmcraft_media::DemoScene::Aurora, 64, 36, 48);
-    make_movie(&b, filmcraft_media::DemoScene::Plasma, 64, 36, 48);
+    make_movie(&a, reelwright_media::DemoScene::Aurora, 64, 36, 48);
+    make_movie(&b, reelwright_media::DemoScene::Plasma, 64, 36, 48);
     let (mut s, items, seq) = session_with(&[&a, &b]);
     // trim both clips so handles exist: A plays media 12..36, B 6..30
     let rate = FrameRate::FPS_24;
@@ -46,7 +46,7 @@ fn imported_seq(r: &serde_json::Value) -> ItemId {
 fn path_of(s: &Session, item: ItemId) -> String {
     match &s.project.item(item).unwrap().kind {
         ItemKind::Media(m) => match &m.media {
-            MediaRef::File { path } => path.clone(),
+            MediaRef::File { path } => path.replace('\\', "/"),
             _ => String::new(),
         },
         _ => String::new(),
@@ -101,7 +101,7 @@ fn aaf_separate_aiff_breakout_and_linked() {
     assert_eq!(files.len(), 4, "two media × two channels: {r}");
     for f in &files {
         let b = std::fs::read(f).unwrap();
-        let (pcm, ch, sr, bits) = filmcraft_interchange::wav::parse_aiff(&b).unwrap();
+        let (pcm, ch, sr, bits) = reelwright_interchange::wav::parse_aiff(&b).unwrap();
         assert_eq!((ch, sr, bits), (1, 48_000, 24));
         assert_eq!(pcm.len(), 24 * 2000 * 3, "one second of mono 24-bit audio (no handles)");
     }
@@ -110,7 +110,7 @@ fn aaf_separate_aiff_breakout_and_linked() {
     let q = s.project.sequence(n).unwrap();
     let mono: Vec<_> = q.audio_tracks.iter().filter(|t| !t.items.is_empty()).collect();
     assert_eq!(mono.len(), 2);
-    assert!(mono.iter().all(|t| t.channels == filmcraft_project::AudioChannels::Mono));
+    assert!(mono.iter().all(|t| t.channels == reelwright_project::AudioChannels::Mono));
 
     // Avid-style consolidated OP-Atom MXF audio: our MXF reader opens every file
     let path = dir.join("mxf.aaf").to_string_lossy().into_owned();
@@ -119,9 +119,9 @@ fn aaf_separate_aiff_breakout_and_linked() {
     assert_eq!(files.len(), 4);
     for f in &files {
         let b = std::fs::read(f).unwrap();
-        let m = filmcraft_mxf::open(&b).unwrap();
+        let m = reelwright_mxf::open(&b).unwrap();
         assert_eq!(m.operational_pattern.name(), "OP-Atom");
-        let t = m.track_of_kind(filmcraft_mxf::TrackKind::Sound).unwrap();
+        let t = m.track_of_kind(reelwright_mxf::TrackKind::Sound).unwrap();
         assert_eq!(m.tracks[t].stored_sample_frames(), 48_000);
     }
     let r = s.execute("file.importAaf", json!({"path": path})).unwrap();
@@ -159,7 +159,7 @@ fn aaf_video_mixdown() {
     assert_eq!(q.video_tracks.iter().map(|t| t.items.len()).sum::<usize>(), 1);
     let v = &q.video_tracks[0].items[0];
     assert_eq!(v.duration, FrameRate::FPS_24.tick_of(48));
-    assert_eq!(path_of(&s, v.item), mov);
+    assert_eq!(path_of(&s, v.item), mov.replace('\\', "/"));
     let m = s.project.item(v.item).unwrap().as_media().unwrap();
     assert!(!m.offline);
     assert_eq!(m.info.video.as_ref().map(|v| (v.width, v.height)), Some((64, 36)));

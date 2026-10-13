@@ -1,17 +1,17 @@
 //! OS media integration (layer L5): hardware video decoding and encoding through the operating
 //! system's codecs.
 //!
-//! [`register`] puts the platform's hardware decoder factory in front of FilmCraft's own decoders
-//! (`filmcraft_codecs::register_video_decoder`). Today that is VideoToolbox on macOS for H.264
+//! [`register`] puts the platform's hardware decoder factory in front of Reelwright's own decoders
+//! (`reelwright_codecs::register_video_decoder`). Today that is VideoToolbox on macOS for H.264
 //! (`avcC`) and HEVC (`hvcC`) streams, 8- and 10-bit, 4:2:0 and 4:2:2; on other systems
 //! registration does nothing and reports [`Availability::Unavailable`]. It also registers a
-//! hardware H.264 encoder factory (`filmcraft_export::register_encoder`) that only acts when an
+//! hardware H.264 encoder factory (`reelwright_export::register_encoder`) that only acts when an
 //! export asks for it (`ExportSettings::hardware_encoding` = `Auto`), see [`hardware_encode`].
 //!
 //! Hardware decoding never makes a file undecodable:
 //!
 //! - the factory declines (falls through to the software decoder) when Settings ▸ Playback ▸
-//!   Hardware decoding is Off (`filmcraft_codecs::hw::set_hardware_decoding`), when the stream's
+//!   Hardware decoding is Off (`reelwright_codecs::hw::set_hardware_decoding`), when the stream's
 //!   format is one the hardware path does not take, or when the OS cannot create a hardware
 //!   session for it (profile, size, no hardware decoder);
 //! - a decoder that fails mid-stream switches to the software decoder transparently
@@ -57,14 +57,14 @@ pub enum Availability {
 
 /// Register the platform's hardware video decoders (call once at startup; repeated calls are
 /// harmless). Streams they do not take, and every stream while hardware decoding is Off, keep
-/// using FilmCraft's own decoders.
+/// using Reelwright's own decoders.
 pub fn register() -> Availability {
     #[cfg(target_os = "macos")]
     {
-        filmcraft_codecs::register_video_decoder(videotoolbox_factory);
-        filmcraft_export::register_encoder(hardware_encode::videotoolbox_encoder_factory);
-        filmcraft_export::register_format_probe(filmcraft_export::Format::Hevc, hardware_encode::hevc_available);
-        filmcraft_codecs::hw::set_hw_backend("VideoToolbox");
+        reelwright_codecs::register_video_decoder(videotoolbox_factory);
+        reelwright_export::register_encoder(hardware_encode::videotoolbox_encoder_factory);
+        reelwright_export::register_format_probe(reelwright_export::Format::Hevc, hardware_encode::hevc_available);
+        reelwright_codecs::hw::set_hw_backend("VideoToolbox");
         Availability::Available("VideoToolbox")
     }
     #[cfg(target_os = "windows")]
@@ -72,9 +72,9 @@ pub fn register() -> Availability {
         static ENCODERS: std::sync::Once = std::sync::Once::new();
         // Export ▸ Hardware encoding (NVENC H.264): in front of the software encoder, taking an
         // export only when asked for and when NVENC can do it
-        ENCODERS.call_once(|| filmcraft_export::register_encoder(nvenc::export::factory));
-        filmcraft_codecs::register_video_decoder(media_foundation_factory);
-        filmcraft_codecs::hw::set_hw_backend("Media Foundation");
+        ENCODERS.call_once(|| reelwright_export::register_encoder(nvenc::export::factory));
+        reelwright_codecs::register_video_decoder(media_foundation_factory);
+        reelwright_codecs::hw::set_hw_backend("Media Foundation");
         Availability::Available("Media Foundation")
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -87,11 +87,11 @@ pub fn register() -> Availability {
 pub fn registered() -> bool {
     #[cfg(target_os = "macos")]
     {
-        filmcraft_codecs::video_decoder_registered(videotoolbox_factory)
+        reelwright_codecs::video_decoder_registered(videotoolbox_factory)
     }
     #[cfg(target_os = "windows")]
     {
-        filmcraft_codecs::video_decoder_registered(media_foundation_factory)
+        reelwright_codecs::video_decoder_registered(media_foundation_factory)
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
@@ -101,10 +101,10 @@ pub fn registered() -> bool {
 
 /// Whether this system's hardware decoder takes the stream of `entry` (whatever the Hardware
 /// decoding setting says): diagnostics and tests.
-pub fn hardware_decoder_for(entry: &filmcraft_isobmff::SampleEntry) -> bool {
+pub fn hardware_decoder_for(entry: &reelwright_isobmff::SampleEntry) -> bool {
     #[cfg(target_os = "macos")]
     {
-        filmcraft_codecs::hw::NalStreamInfo::from_entry(entry).and_then(|r| r.ok()).is_some_and(|info| videotoolbox::VtDecoder::new(info).is_ok())
+        reelwright_codecs::hw::NalStreamInfo::from_entry(entry).and_then(|r| r.ok()).is_some_and(|info| videotoolbox::VtDecoder::new(info).is_ok())
     }
     #[cfg(target_os = "windows")]
     {
@@ -120,16 +120,16 @@ pub fn hardware_decoder_for(entry: &filmcraft_isobmff::SampleEntry) -> bool {
 /// The VideoToolbox factory: a [`HybridDecoder`] around [`videotoolbox::VtDecoder`] for `avcC` /
 /// `hvcC` streams VideoToolbox can decode in hardware, `None` otherwise.
 #[cfg(target_os = "macos")]
-pub fn videotoolbox_factory(entry: &filmcraft_isobmff::SampleEntry) -> Option<filmcraft_codecs::Result<Box<dyn filmcraft_codecs::VideoDecoder>>> {
-    if !filmcraft_codecs::hw::hardware_decoding() {
+pub fn videotoolbox_factory(entry: &reelwright_isobmff::SampleEntry) -> Option<reelwright_codecs::Result<Box<dyn reelwright_codecs::VideoDecoder>>> {
+    if !reelwright_codecs::hw::hardware_decoding() {
         return None;
     }
-    let info = filmcraft_codecs::hw::NalStreamInfo::from_entry(entry)?.ok()?;
+    let info = reelwright_codecs::hw::NalStreamInfo::from_entry(entry)?.ok()?;
     match videotoolbox::VtDecoder::new(info.clone()) {
         Ok(vt) => Some(Ok(Box::new(HybridDecoder::new(Box::new(vt), entry.clone(), info)))),
         Err(why) => {
             log::info!("hardware decoding declined for {} video: {why}", entry.codec.name());
-            filmcraft_codecs::hw::note_hw_declined();
+            reelwright_codecs::hw::note_hw_declined();
             None
         }
     }
@@ -139,8 +139,8 @@ pub fn videotoolbox_factory(entry: &filmcraft_isobmff::SampleEntry) -> Option<fi
 /// H.264 / HEVC / VP9 / AV1 streams a Direct3D-aware decoder MFT can decode with DXVA on this
 /// system's GPU, `None` otherwise.
 #[cfg(target_os = "windows")]
-pub fn media_foundation_factory(entry: &filmcraft_isobmff::SampleEntry) -> Option<filmcraft_codecs::Result<Box<dyn filmcraft_codecs::VideoDecoder>>> {
-    if !filmcraft_codecs::hw::hardware_decoding() {
+pub fn media_foundation_factory(entry: &reelwright_isobmff::SampleEntry) -> Option<reelwright_codecs::Result<Box<dyn reelwright_codecs::VideoDecoder>>> {
+    if !reelwright_codecs::hw::hardware_decoding() {
         return None;
     }
     let info = media_foundation::stream_info(entry)?;
@@ -148,7 +148,7 @@ pub fn media_foundation_factory(entry: &filmcraft_isobmff::SampleEntry) -> Optio
         Ok(mf) => Some(Ok(Box::new(HybridDecoder::new(Box::new(mf), entry.clone(), info)))),
         Err(why) => {
             log::info!("hardware decoding declined for {} video: {why}", entry.codec.name());
-            filmcraft_codecs::hw::note_hw_declined();
+            reelwright_codecs::hw::note_hw_declined();
             None
         }
     }

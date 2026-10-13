@@ -17,11 +17,11 @@
 //! scratch rows `projectSettings.scratch.<key>` / `.browse` / `.same`.
 
 use egui::{Align2, RichText};
-use filmcraft_project::{FindOp, find::COLUMNS};
+use reelwright_project::{FindOp, find::COLUMNS};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::dock::PanelKind;
 use crate::state::ClipDialogDraft;
 
@@ -67,6 +67,8 @@ fn meta(command: &str) -> Option<(&'static str, &'static str, &'static str)> {
         "file.saveAsTemplate" => ("Save as Template", "saveTemplate", "Save"),
         "markers.addFlashCue" => ("Flash Cue Marker", "flashCue", "OK"),
         "help.systemCompatibilityReport" => ("System Compatibility Report", "systemReport", "Close"),
+        "sequence.editStats" => ("Edit Statistics", "editStats", "Close"),
+        "captions.checkReadability" => ("Caption Readability", "captionCheck", "Close"),
         "file.newColorMatte" => ("New Color Matte", "colorMatte", "OK"),
         "project.matteColor" => ("Color Matte Color", "matteColor", "OK"),
         _ => return None,
@@ -96,25 +98,25 @@ fn dialog_command(id: &str) -> Option<&'static str> {
     })
 }
 
-fn enabled(app: &FilmcraftApp, id: &str) -> Result<(), String> {
-    filmcraft_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))
+fn enabled(app: &ReelwrightApp, id: &str) -> Result<(), String> {
+    reelwright_engine::find_command(id).map_or(Ok(()), |c| (c.enabled)(&app.session))
 }
 
 /// Checkmark state of this module's toggles in the menus.
-pub fn checked(app: &FilmcraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &ReelwrightApp, id: &str) -> Option<bool> {
     (id == "view.dynamicAudioWaveforms").then_some(app.ui.extras.dynamic_waveforms)
 }
 
 /// Project Settings ▸ General ▸ Renderer is "Software Only": the Program monitor composites on
 /// the CPU.
-pub fn software_renderer(app: &FilmcraftApp) -> bool {
-    app.session.project.settings.renderer == filmcraft_engine::project_tools::RENDERER_SOFTWARE
+pub fn software_renderer(app: &ReelwrightApp) -> bool {
+    app.session.project.settings.renderer == reelwright_engine::project_tools::RENDERER_SOFTWARE
 }
 
 /// Hand a path to the operating system (open it in its default application, or reveal it in the
 /// file manager). The host hook does it on the desktop; otherwise the path is opened as a
 /// `file://` URL.
-pub fn open_path(app: &mut FilmcraftApp, ctx: &egui::Context, path: &str, reveal: bool) -> Result<(), String> {
+pub fn open_path(app: &mut ReelwrightApp, ctx: &egui::Context, path: &str, reveal: bool) -> Result<(), String> {
     app.ui.extras.opened.push(path.to_string());
     if app.ui.extras.opened.len() > 50 {
         app.ui.extras.opened.remove(0);
@@ -130,12 +132,12 @@ pub fn open_path(app: &mut FilmcraftApp, ctx: &egui::Context, path: &str, reveal
 }
 
 /// Where Reveal Log Files points: `<data dir>/Logs` (the temp folder without a data directory).
-pub fn logs_dir(app: &FilmcraftApp) -> std::path::PathBuf {
-    app.session.prefs_path.as_ref().and_then(|p| p.parent()).map(|d| d.join("Logs")).unwrap_or_else(|| filmcraft_engine::temp_dir().join("FilmCraft Logs"))
+pub fn logs_dir(app: &ReelwrightApp) -> std::path::PathBuf {
+    app.session.prefs_path.as_ref().and_then(|p| p.parent()).map(|d| d.join("Logs")).unwrap_or_else(|| reelwright_engine::temp_dir().join("Reelwright Logs"))
 }
 
 /// Write this session's log (system report and the command journal) into [`logs_dir`].
-fn write_session_log(app: &FilmcraftApp) -> Result<std::path::PathBuf, String> {
+fn write_session_log(app: &ReelwrightApp) -> Result<std::path::PathBuf, String> {
     let dir = logs_dir(app);
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let path = dir.join(format!("session-{}.log", std::process::id()));
@@ -148,8 +150,8 @@ fn write_session_log(app: &FilmcraftApp) -> Result<std::path::PathBuf, String> {
 }
 
 /// The engine's report plus the GPU adapter (wgpu) when the GPU compositor is on.
-pub fn system_report(app: &FilmcraftApp) -> Value {
-    let mut r = filmcraft_engine::project_tools::system_report();
+pub fn system_report(app: &ReelwrightApp) -> Value {
+    let mut r = reelwright_engine::project_tools::system_report();
     let gpu = app.gpu.as_ref().map(|g| {
         let i = g.render_state.adapter.get_info();
         json!({"name": i.name, "backend": format!("{:?}", i.backend), "type": format!("{:?}", i.device_type), "driver": i.driver, "driverInfo": i.driver_info})
@@ -164,7 +166,7 @@ pub fn system_report(app: &FilmcraftApp) -> Value {
 }
 
 /// Menu / shortcut entry points. Returns None for ids this module doesn't handle.
-pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn route(app: &mut ReelwrightApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let empty = params.as_object().is_none_or(|m| m.is_empty());
     // UI commands
     match id {
@@ -184,6 +186,17 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
             app.ui.extras.dialog = Some(ClipDialogDraft { command: id.into(), params: json!({}), info: report.clone(), error: String::new() });
             return Some(Ok(json!({"dialog": "systemReport", "report": report})));
         }
+        "sequence.editStats" | "captions.checkReadability" if empty => {
+            if let Err(e) = enabled(app, id) {
+                app.ui.status = e.clone();
+                return Some(Err(e));
+            }
+            let r = app.session.execute(id, json!({})).map_err(|e| e.to_string());
+            return Some(r.map(|report| {
+                app.ui.extras.dialog = Some(ClipDialogDraft { command: id.into(), params: json!({}), info: report.clone(), error: String::new() });
+                json!({"dialog": meta(id).map(|m| m.1), "report": report})
+            }));
+        }
         "edit.editOriginal" => {
             let r = app.session.execute(id, params.clone()).map_err(|e| e.to_string());
             return Some(r.and_then(|v| {
@@ -198,7 +211,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
             if let Ok(v) = &r {
                 let mut peaks = app.tl.peaks.lock().unwrap_or_else(|e| e.into_inner());
                 for i in v["items"].as_array().cloned().unwrap_or_default() {
-                    peaks.remove(&filmcraft_engine::project::ItemId(i.as_u64().unwrap_or_default()));
+                    peaks.remove(&reelwright_engine::project::ItemId(i.as_u64().unwrap_or_default()));
                 }
             }
             return Some(r);
@@ -210,7 +223,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
             let (filter, ext, name) = if id == "file.exportAle" {
                 ("Avid Log Exchange", "ale", format!("{}.ale", app.session.project.name))
             } else {
-                ("FilmCraft Project", "fcproj", format!("{} Selection.fcproj", app.session.project.name))
+                ("Reelwright Project", "fcproj", format!("{} Selection.fcproj", app.session.project.name))
             };
             let Some(path) = app.hooks.pick_save_as.as_mut().and_then(|f| f(filter, &[ext], &name)) else {
                 return Some(Ok(Value::Null));
@@ -224,7 +237,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
         }
         "file.mediaPropertiesFile" if params.get("path").is_none() => {
             let exts: Vec<&str> =
-                filmcraft_media::VIDEO_EXTENSIONS.iter().chain(filmcraft_media::AUDIO_EXTENSIONS).chain(filmcraft_media::STILL_EXTENSIONS).copied().collect();
+                reelwright_media::VIDEO_EXTENSIONS.iter().chain(reelwright_media::AUDIO_EXTENSIONS).chain(reelwright_media::STILL_EXTENSIONS).copied().collect();
             let Some(path) = app.hooks.pick_open_file.as_mut().and_then(|f| f("Media", &exts)) else { return Some(Ok(Value::Null)) };
             let r = app.session.execute(id, json!({"path": path})).map_err(|e| e.to_string());
             if let Ok(v) = &r {
@@ -252,7 +265,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
 }
 
 /// Initial parameters (and display info) of a dialog.
-fn defaults(app: &mut FilmcraftApp, cmd: &str, id: &str) -> Result<(Value, Value), String> {
+fn defaults(app: &mut ReelwrightApp, cmd: &str, id: &str) -> Result<(Value, Value), String> {
     let s = &mut app.session;
     Ok(match cmd {
         "edit.find" => {
@@ -282,7 +295,7 @@ fn defaults(app: &mut FilmcraftApp, cmd: &str, id: &str) -> Result<(Value, Value
             };
             let st = s.project.settings.clone();
             let general = s.execute("file.projectSettings.general", json!({})).map_err(|e| e.to_string())?;
-            let scratch = filmcraft_engine::project_tools::scratch_paths(s);
+            let scratch = reelwright_engine::project_tools::scratch_paths(s);
             let ingest = serde_json::to_value(&st.ingest).unwrap_or_default();
             let sc = &st.scratch;
             (
@@ -306,7 +319,7 @@ fn defaults(app: &mut FilmcraftApp, cmd: &str, id: &str) -> Result<(Value, Value
             if let Some(it) = item {
                 p["item"] = json!(it.id.0);
                 p["mediaName"] = json!(it.name);
-                for (k, key) in filmcraft_engine::project_tools::OFFLINE_FIELDS {
+                for (k, key) in reelwright_engine::project_tools::OFFLINE_FIELDS {
                     p[k] = json!(it.metadata.get(key).cloned().unwrap_or_default());
                 }
             }
@@ -343,8 +356,8 @@ fn defaults(app: &mut FilmcraftApp, cmd: &str, id: &str) -> Result<(Value, Value
         "project.matteColor" => {
             let matte = match s.state.project_selection.as_slice() {
                 [id] => s.project.item(*id).and_then(|it| match &it.kind {
-                    filmcraft_engine::project::ItemKind::Media(m) => match &m.media {
-                        filmcraft_engine::project::MediaRef::Generator(filmcraft_media::Generator::ColorMatte { color }) => Some((it.id, *color)),
+                    reelwright_engine::project::ItemKind::Media(m) => match &m.media {
+                        reelwright_engine::project::MediaRef::Generator(reelwright_media::Generator::ColorMatte { color }) => Some((it.id, *color)),
                         _ => None,
                     },
                     _ => None,
@@ -352,7 +365,7 @@ fn defaults(app: &mut FilmcraftApp, cmd: &str, id: &str) -> Result<(Value, Value
                 _ => None,
             };
             let (id, color) = matte.ok_or("select one Color Matte")?;
-            (json!({"item": id.0, "color": filmcraft_color::to_hex(color)}), Value::Null)
+            (json!({"item": id.0, "color": reelwright_color::to_hex(color)}), Value::Null)
         }
         _ => (json!({}), Value::Null),
     })
@@ -426,7 +439,7 @@ fn combo(ui: &mut egui::Ui, elems: &mut Elems, id: &str, label: &str, value: &mu
 fn color(ui: &mut egui::Ui, elems: &mut Elems, pre: &str, p: &mut Value, key: &str, label: &str) {
     ui.horizontal(|ui| {
         ui.label(label);
-        let c = p.get(key).and_then(Value::as_str).and_then(filmcraft_color::parse_hex).unwrap_or([0.0, 0.0, 0.0, 1.0]);
+        let c = p.get(key).and_then(Value::as_str).and_then(reelwright_color::parse_hex).unwrap_or([0.0, 0.0, 0.0, 1.0]);
         let mut rgb = [c[0], c[1], c[2]].map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
         let r = egui::color_picker::color_edit_button_srgb(ui, &mut rgb);
         push(elems, format!("{pre}.{key}"), &r, label);
@@ -441,8 +454,100 @@ fn pairs(v: &[&str]) -> Vec<(String, String)> {
     v.iter().map(|x| (x.to_string(), x.to_string())).collect()
 }
 
+/// `m:ss.s` from seconds.
+fn clock(seconds: f64) -> String {
+    let tenths = (seconds.max(0.0) * 10.0).round() as u64;
+    format!("{}:{:02}.{}", tenths / 600, tenths / 10 % 60, tenths % 10)
+}
+
+/// Sequence > Edit Statistics: the numbers of the cut and a bar per shot-length bucket.
+fn edit_stats_ui(ui: &mut egui::Ui, r: &Value) {
+    let shots = r["shots"].as_u64().unwrap_or(0);
+    if shots == 0 {
+        ui.label("The sequence has no video clips to measure.");
+        return;
+    }
+    let num = |k: &str| r[k].as_f64().unwrap_or(0.0);
+    egui::Grid::new("editStats.grid").num_columns(2).spacing([16.0, 4.0]).show(ui, |ui| {
+        let rows: [(&str, String); 6] = [
+            ("Shots", shots.to_string()),
+            ("Cuts", r["cuts"].as_u64().unwrap_or(0).to_string()),
+            ("Program length", clock(num("durationSeconds"))),
+            ("Average shot", format!("{:.2} s", num("averageShotSeconds"))),
+            ("Median shot", format!("{:.2} s", num("medianShotSeconds"))),
+            ("Pace", format!("{:.1} cuts per minute", num("cutsPerMinute"))),
+        ];
+        for (k, v) in rows {
+            ui.label(RichText::new(k).weak());
+            ui.label(v);
+            ui.end_row();
+        }
+        for (k, key) in [("Longest shot", "longest"), ("Shortest shot", "shortest")] {
+            let s = &r[key];
+            ui.label(RichText::new(k).weak());
+            ui.label(format!("{} ({:.2} s)", s["name"].as_str().unwrap_or("-"), s["seconds"].as_f64().unwrap_or(0.0)));
+            ui.end_row();
+        }
+    });
+    ui.add_space(6.0);
+    ui.label(RichText::new("Shot lengths").strong());
+    let buckets = r["histogram"].as_array().cloned().unwrap_or_default();
+    let most = buckets.iter().filter_map(|b| b["count"].as_u64()).max().unwrap_or(0).max(1);
+    for b in &buckets {
+        let n = b["count"].as_u64().unwrap_or(0);
+        ui.horizontal(|ui| {
+            ui.add_sized([84.0, 18.0], egui::Label::new(b["label"].as_str().unwrap_or_default()));
+            ui.add(egui::ProgressBar::new(n as f32 / most as f32).desired_width(220.0).text(n.to_string()));
+        });
+    }
+}
+
+/// Sequence > Captions > Check Readability: a summary and the captions with a problem, each a
+/// button that moves the playhead to it.
+fn caption_check_ui(ui: &mut egui::Ui, elems: &mut Elems, pre: &str, r: &Value, goto: &mut Option<u64>) {
+    let checked = r["captions"].as_u64().unwrap_or(0);
+    let issues = r["issues"].as_array().cloned().unwrap_or_default();
+    if issues.is_empty() {
+        ui.label(format!("{checked} captions checked: all comfortable to read."));
+    } else {
+        ui.label(format!("{checked} captions checked, {} need attention.", r["flagged"].as_u64().unwrap_or(0)));
+    }
+    let l = &r["limits"];
+    ui.label(
+        RichText::new(format!(
+            "Limits: {} characters per second, {} characters per line, {} lines, {:.1} to {:.0} seconds, {} frames between captions",
+            l["maxCps"].as_f64().unwrap_or(0.0),
+            l["maxLine"].as_u64().unwrap_or(0),
+            l["maxLines"].as_u64().unwrap_or(0),
+            l["minSeconds"].as_f64().unwrap_or(0.0),
+            l["maxSeconds"].as_f64().unwrap_or(0.0),
+            l["minGapFrames"].as_u64().unwrap_or(0),
+        ))
+        .weak()
+        .small(),
+    );
+    if issues.is_empty() {
+        return;
+    }
+    ui.separator();
+    egui::ScrollArea::vertical().max_height(330.0).show(ui, |ui| {
+        for (n, i) in issues.iter().take(300).enumerate() {
+            let text = i["text"].as_str().unwrap_or_default().replace('\n', " / ");
+            let r = ui.button(format!("{}  {}", i["in"].as_str().unwrap_or_default(), text.chars().take(48).collect::<String>()));
+            elems.push((format!("{pre}.issue.{n}"), r.rect, "Go to caption".to_string()));
+            if r.clicked() {
+                *goto = i["caption"].as_u64();
+            }
+            ui.label(RichText::new(i["message"].as_str().unwrap_or_default()).weak().small());
+        }
+        if issues.len() > 300 {
+            ui.label(format!("... and {} more", issues.len() - 300));
+        }
+    });
+}
+
 /// Draw the open dialog, if any.
-pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut ReelwrightApp, ctx: &egui::Context) {
     let Some(mut d) = app.ui.extras.dialog.clone() else { return };
     let Some((title, pre, ok_text)) = meta(&d.command) else {
         app.ui.extras.dialog = None;
@@ -451,7 +556,11 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let mut elems: Elems = Vec::new();
     let mut action: Option<&'static str> = None;
     let mut browse: Option<String> = None;
-    let info_only = matches!(d.command.as_str(), "file.mediaProperties" | "clip.sourceSettings" | "help.systemCompatibilityReport");
+    let mut goto: Option<u64> = None;
+    let info_only = matches!(
+        d.command.as_str(),
+        "file.mediaProperties" | "clip.sourceSettings" | "help.systemCompatibilityReport" | "sequence.editStats" | "captions.checkReadability"
+    );
     egui::Window::new(title).collapsible(false).resizable(false).default_width(420.0).anchor(Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
         let p = &mut d.params;
         match d.command.as_str() {
@@ -575,13 +684,13 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                     _ => {
                         ui.label(RichText::new("Video Rendering and Playback").strong());
                         let rs = vec![
-                            (filmcraft_engine::project_tools::RENDERER_GPU.to_string(), filmcraft_engine::project_tools::RENDERER_GPU.to_string()),
-                            (filmcraft_engine::project_tools::RENDERER_SOFTWARE.to_string(), filmcraft_engine::project_tools::RENDERER_SOFTWARE.to_string()),
+                            (reelwright_engine::project_tools::RENDERER_GPU.to_string(), reelwright_engine::project_tools::RENDERER_GPU.to_string()),
+                            (reelwright_engine::project_tools::RENDERER_SOFTWARE.to_string(), reelwright_engine::project_tools::RENDERER_SOFTWARE.to_string()),
                         ];
                         combo(ui, &mut elems, "projectSettings.renderer", "Renderer:", &mut p["renderer"], &rs);
                         ui.label(RichText::new("Video").strong());
                         let vd: Vec<(String, String)> =
-                            filmcraft_time::TimeDisplay::ALL.iter().map(|t| (t.label().to_string(), t.label().to_string())).collect();
+                            reelwright_time::TimeDisplay::ALL.iter().map(|t| (t.label().to_string(), t.label().to_string())).collect();
                         combo(ui, &mut elems, "projectSettings.videoDisplay", "Display Format:", &mut p["videoDisplay"], &vd);
                         ui.label(RichText::new("Audio").strong());
                         combo(
@@ -736,6 +845,8 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 text(ui, &mut elems, pre, p, "name", "Name:", 220.0);
                 text(ui, &mut elems, pre, p, "comment", "Comments:", 220.0);
             }
+            "sequence.editStats" => edit_stats_ui(ui, &d.info),
+            "captions.checkReadability" => caption_check_ui(ui, &mut elems, pre, &d.info, &mut goto),
             "help.systemCompatibilityReport" => {
                 let r = &d.info;
                 ui.label(RichText::new(r["app"].as_str().unwrap_or_default()).strong());
@@ -796,6 +907,10 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
     {
         d.params[k.as_str()] = json!(dir);
     }
+    if let Some(id) = goto {
+        // the caption is shown in the Program monitor; the report stays open
+        d.error = app.session.execute("captions.goTo", json!({"caption": id})).err().map(|e| e.to_string()).unwrap_or_default();
+    }
     if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         action = Some("cancel");
     }
@@ -818,7 +933,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
 }
 
 /// Run the dialog's command(s). `Ok(Some(text))` keeps the dialog open with a message (Find).
-fn run(app: &mut FilmcraftApp, d: &ClipDialogDraft) -> Result<Option<String>, String> {
+fn run(app: &mut ReelwrightApp, d: &ClipDialogDraft) -> Result<Option<String>, String> {
     let s = &mut app.session;
     let p = &d.params;
     match d.command.as_str() {
@@ -874,11 +989,11 @@ fn run(app: &mut FilmcraftApp, d: &ClipDialogDraft) -> Result<Option<String>, St
 /// Search bins in the Project panel's list view: one row per search bin (`project.searchBin.<id>`),
 /// expanded to its live matches. Right-click: Delete.
 pub fn search_bin_rows(
-    app: &mut FilmcraftApp,
+    app: &mut ReelwrightApp,
     ui: &mut egui::Ui,
     row: &mut usize,
     actions: &mut Vec<(String, Value)>,
-    draw_items: &mut dyn FnMut(&mut FilmcraftApp, &mut egui::Ui, &filmcraft_project::Bin, &mut usize, &mut Vec<(String, Value)>),
+    draw_items: &mut dyn FnMut(&mut ReelwrightApp, &mut egui::Ui, &reelwright_project::Bin, &mut usize, &mut Vec<(String, Value)>),
 ) {
     let t = app.tokens;
     for sb in app.session.project.search_bins.clone() {
@@ -925,7 +1040,7 @@ pub fn search_bin_rows(
         });
         if open {
             let bin =
-                filmcraft_project::Bin { id: sb.id, name: sb.name.clone(), children: matches.into_iter().map(filmcraft_project::BinEntry::Item).collect() };
+                reelwright_project::Bin { id: sb.id, name: sb.name.clone(), children: matches.into_iter().map(reelwright_project::BinEntry::Item).collect() };
             draw_items(app, ui, &bin, row, actions);
         }
     }

@@ -1664,623 +1664,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "filmcraft"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "cpal",
- "eframe",
- "egui",
- "filmcraft-engine",
- "filmcraft-platform",
- "filmcraft-ui-egui",
- "log",
- "muda",
- "objc2 0.6.4",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "rfd",
- "serde_json",
- "winit",
- "winresource",
-]
-
-[[package]]
-name = "filmcraft-aac"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-ac3"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-apv"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-audio-dsp"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
-]
-
-[[package]]
-name = "filmcraft-automation"
-version = "0.4.0"
-dependencies = [
- "base64 0.22.1",
- "filmcraft-engine",
- "filmcraft-time",
- "image",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
-]
-
-[[package]]
-name = "filmcraft-av1"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "rustix 1.1.5",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-bitstream"
-version = "0.4.0"
-dependencies = [
- "proptest",
-]
-
-[[package]]
-name = "filmcraft-captions"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-project",
- "filmcraft-text",
- "filmcraft-time",
- "proptest",
- "roxmltree",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-cfb"
-version = "0.4.0"
-
-[[package]]
-name = "filmcraft-cli"
-version = "0.4.0"
-dependencies = [
- "filmcraft-automation",
- "filmcraft-codecs",
- "filmcraft-engine",
- "filmcraft-media",
- "filmcraft-mpegts",
- "filmcraft-mxf",
- "filmcraft-ogg",
- "filmcraft-platform",
- "filmcraft-time",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "filmcraft-codecs"
-version = "0.4.0"
-dependencies = [
- "filmcraft-aac",
- "filmcraft-ac3",
- "filmcraft-apv",
- "filmcraft-av1",
- "filmcraft-bitstream",
- "filmcraft-color",
- "filmcraft-dnx",
- "filmcraft-frame",
- "filmcraft-h264",
- "filmcraft-hevc",
- "filmcraft-isobmff",
- "filmcraft-matroska",
- "filmcraft-media",
- "filmcraft-mpeg2v",
- "filmcraft-mpegts",
- "filmcraft-mxf",
- "filmcraft-ogg",
- "filmcraft-opus",
- "filmcraft-prores",
- "filmcraft-testkit",
- "filmcraft-time",
- "filmcraft-vp9",
- "image",
- "log",
- "symphonia",
- "thiserror 2.0.21",
- "web-time",
-]
-
-[[package]]
-name = "filmcraft-color"
-version = "0.4.0"
-dependencies = [
- "proptest",
- "serde",
-]
-
-[[package]]
-name = "filmcraft-dnx"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-edit"
-version = "0.4.0"
-dependencies = [
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-time",
- "proptest",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-engine"
-version = "0.4.0"
-dependencies = [
- "filmcraft-audio-dsp",
- "filmcraft-captions",
- "filmcraft-codecs",
- "filmcraft-color",
- "filmcraft-edit",
- "filmcraft-export",
- "filmcraft-format",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-interchange",
- "filmcraft-media",
- "filmcraft-mxf",
- "filmcraft-project",
- "filmcraft-render",
- "filmcraft-scopes",
- "filmcraft-speech",
- "filmcraft-testkit",
- "filmcraft-text",
- "filmcraft-time",
- "image",
- "log",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "web-time",
-]
-
-[[package]]
-name = "filmcraft-export"
-version = "0.4.0"
-dependencies = [
- "filmcraft-aac",
- "filmcraft-apv",
- "filmcraft-audio-dsp",
- "filmcraft-codecs",
- "filmcraft-color",
- "filmcraft-dnx",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-h264enc",
- "filmcraft-isobmff",
- "filmcraft-media",
- "filmcraft-mxf",
- "filmcraft-project",
- "filmcraft-prores",
- "filmcraft-render",
- "filmcraft-testkit",
- "filmcraft-text",
- "filmcraft-time",
- "image",
- "rayon",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "web-time",
-]
-
-[[package]]
-name = "filmcraft-format"
-version = "0.4.0"
-dependencies = [
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-time",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-frame"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-time",
- "rayon",
- "serde",
-]
-
-[[package]]
-name = "filmcraft-geom"
-version = "0.4.0"
-dependencies = [
- "proptest",
- "serde",
-]
-
-[[package]]
-name = "filmcraft-golden"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-gpu",
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-render",
- "filmcraft-testkit",
- "filmcraft-time",
- "pollster 0.4.0",
- "wgpu",
-]
-
-[[package]]
-name = "filmcraft-gpu"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-render",
- "filmcraft-time",
- "log",
- "pollster 0.4.0",
- "rayon",
- "wgpu",
-]
-
-[[package]]
-name = "filmcraft-h264"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-h264enc"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-hevc"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-interchange"
-version = "0.4.0"
-dependencies = [
- "filmcraft-cfb",
- "filmcraft-color",
- "filmcraft-geom",
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-time",
- "proptest",
- "roxmltree",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-isobmff"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "proptest",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-matroska"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
- "serde_json",
-]
-
-[[package]]
-name = "filmcraft-media"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-frame",
- "filmcraft-time",
- "image",
- "rayon",
- "serde",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-mpeg2v"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-mpegts"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-mxf"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
-]
-
-[[package]]
-name = "filmcraft-ogg"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
-]
-
-[[package]]
-name = "filmcraft-opus"
-version = "0.4.0"
-dependencies = [
- "filmcraft-testkit",
-]
-
-[[package]]
-name = "filmcraft-platform"
-version = "0.4.0"
-dependencies = [
- "filmcraft-codecs",
- "filmcraft-color",
- "filmcraft-export",
- "filmcraft-frame",
- "filmcraft-isobmff",
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-render",
- "filmcraft-testkit",
- "filmcraft-time",
- "log",
- "objc2-core-foundation",
- "objc2-core-media",
- "objc2-core-video",
- "objc2-video-toolbox",
- "windows 0.62.2",
-]
-
-[[package]]
-name = "filmcraft-project"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "filmcraft-geom",
- "filmcraft-media",
- "filmcraft-time",
- "proptest",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-prores"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "filmcraft-testkit",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-render"
-version = "0.4.0"
-dependencies = [
- "filmcraft-audio-dsp",
- "filmcraft-captions",
- "filmcraft-color",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-media",
- "filmcraft-project",
- "filmcraft-text",
- "filmcraft-time",
- "image",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "filmcraft-scopes"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "filmcraft-speech"
-version = "0.4.0"
-dependencies = [
- "candle-core",
- "candle-nn",
- "filmcraft-project",
- "filmcraft-time",
- "rayon",
- "rustls",
- "rustls-rustcrypto",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.21",
- "ureq",
-]
-
-[[package]]
-name = "filmcraft-testkit"
-version = "0.4.0"
-dependencies = [
- "png",
-]
-
-[[package]]
-name = "filmcraft-text"
-version = "0.4.0"
-dependencies = [
- "filmcraft-color",
- "harfrust",
- "skrifa",
- "unicode-bidi",
- "unicode-linebreak",
-]
-
-[[package]]
-name = "filmcraft-time"
-version = "0.4.0"
-dependencies = [
- "proptest",
- "serde",
-]
-
-[[package]]
-name = "filmcraft-ui-egui"
-version = "0.4.0"
-dependencies = [
- "cpu-time",
- "eframe",
- "egui",
- "egui_kittest",
- "filmcraft-audio-dsp",
- "filmcraft-codecs",
- "filmcraft-color",
- "filmcraft-edit",
- "filmcraft-engine",
- "filmcraft-frame",
- "filmcraft-geom",
- "filmcraft-gpu",
- "filmcraft-interchange",
- "filmcraft-media",
- "filmcraft-platform",
- "filmcraft-project",
- "filmcraft-render",
- "filmcraft-scopes",
- "filmcraft-text",
- "filmcraft-time",
- "image",
- "log",
- "pollster 0.4.0",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "toml 1.1.6+spec-1.1.0",
- "web-time",
-]
-
-[[package]]
-name = "filmcraft-vp9"
-version = "0.4.0"
-dependencies = [
- "filmcraft-bitstream",
- "rayon",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "filmcraft-web"
-version = "0.4.0"
-dependencies = [
- "eframe",
- "egui",
- "filmcraft-codecs",
- "filmcraft-color",
- "filmcraft-engine",
- "filmcraft-format",
- "filmcraft-frame",
- "filmcraft-isobmff",
- "filmcraft-media",
- "filmcraft-time",
- "filmcraft-ui-egui",
- "js-sys",
- "log",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
-]
-
-[[package]]
 name = "find-msvc-tools"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4823,6 +4206,623 @@ dependencies = [
 ]
 
 [[package]]
+name = "reelwright"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "cpal",
+ "eframe",
+ "egui",
+ "log",
+ "muda",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "reelwright-engine",
+ "reelwright-platform",
+ "reelwright-ui-egui",
+ "rfd",
+ "serde_json",
+ "winit",
+ "winresource",
+]
+
+[[package]]
+name = "reelwright-aac"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-ac3"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-apv"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-audio-dsp"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+]
+
+[[package]]
+name = "reelwright-automation"
+version = "0.4.0"
+dependencies = [
+ "base64 0.22.1",
+ "image",
+ "reelwright-engine",
+ "reelwright-time",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "reelwright-av1"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "rustix 1.1.5",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-bitstream"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
+name = "reelwright-captions"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "reelwright-color",
+ "reelwright-project",
+ "reelwright-text",
+ "reelwright-time",
+ "roxmltree",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-cfb"
+version = "0.4.0"
+
+[[package]]
+name = "reelwright-cli"
+version = "0.4.0"
+dependencies = [
+ "reelwright-automation",
+ "reelwright-codecs",
+ "reelwright-engine",
+ "reelwright-media",
+ "reelwright-mpegts",
+ "reelwright-mxf",
+ "reelwright-ogg",
+ "reelwright-platform",
+ "reelwright-time",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "reelwright-codecs"
+version = "0.4.0"
+dependencies = [
+ "image",
+ "log",
+ "reelwright-aac",
+ "reelwright-ac3",
+ "reelwright-apv",
+ "reelwright-av1",
+ "reelwright-bitstream",
+ "reelwright-color",
+ "reelwright-dnx",
+ "reelwright-frame",
+ "reelwright-h264",
+ "reelwright-hevc",
+ "reelwright-isobmff",
+ "reelwright-matroska",
+ "reelwright-media",
+ "reelwright-mpeg2v",
+ "reelwright-mpegts",
+ "reelwright-mxf",
+ "reelwright-ogg",
+ "reelwright-opus",
+ "reelwright-prores",
+ "reelwright-testkit",
+ "reelwright-time",
+ "reelwright-vp9",
+ "symphonia",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
+name = "reelwright-color"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "serde",
+]
+
+[[package]]
+name = "reelwright-dnx"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-edit"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-time",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-engine"
+version = "0.4.0"
+dependencies = [
+ "image",
+ "log",
+ "reelwright-audio-dsp",
+ "reelwright-captions",
+ "reelwright-codecs",
+ "reelwright-color",
+ "reelwright-edit",
+ "reelwright-export",
+ "reelwright-format",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-interchange",
+ "reelwright-media",
+ "reelwright-mxf",
+ "reelwright-project",
+ "reelwright-render",
+ "reelwright-scopes",
+ "reelwright-speech",
+ "reelwright-testkit",
+ "reelwright-text",
+ "reelwright-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
+name = "reelwright-export"
+version = "0.4.0"
+dependencies = [
+ "image",
+ "rayon",
+ "reelwright-aac",
+ "reelwright-apv",
+ "reelwright-audio-dsp",
+ "reelwright-codecs",
+ "reelwright-color",
+ "reelwright-dnx",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-h264enc",
+ "reelwright-isobmff",
+ "reelwright-media",
+ "reelwright-mxf",
+ "reelwright-project",
+ "reelwright-prores",
+ "reelwright-render",
+ "reelwright-testkit",
+ "reelwright-text",
+ "reelwright-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
+name = "reelwright-format"
+version = "0.4.0"
+dependencies = [
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-frame"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-color",
+ "reelwright-time",
+ "serde",
+]
+
+[[package]]
+name = "reelwright-geom"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "serde",
+]
+
+[[package]]
+name = "reelwright-golden"
+version = "0.4.0"
+dependencies = [
+ "pollster 0.4.0",
+ "reelwright-color",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-gpu",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-render",
+ "reelwright-testkit",
+ "reelwright-time",
+ "wgpu",
+]
+
+[[package]]
+name = "reelwright-gpu"
+version = "0.4.0"
+dependencies = [
+ "log",
+ "pollster 0.4.0",
+ "rayon",
+ "reelwright-color",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-render",
+ "reelwright-time",
+ "wgpu",
+]
+
+[[package]]
+name = "reelwright-h264"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-h264enc"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-hevc"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-interchange"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "reelwright-cfb",
+ "reelwright-color",
+ "reelwright-geom",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-time",
+ "roxmltree",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-isobmff"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-matroska"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+ "serde_json",
+]
+
+[[package]]
+name = "reelwright-media"
+version = "0.4.0"
+dependencies = [
+ "image",
+ "rayon",
+ "reelwright-color",
+ "reelwright-frame",
+ "reelwright-time",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-mpeg2v"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-mpegts"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-mxf"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+]
+
+[[package]]
+name = "reelwright-ogg"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+]
+
+[[package]]
+name = "reelwright-opus"
+version = "0.4.0"
+dependencies = [
+ "reelwright-testkit",
+]
+
+[[package]]
+name = "reelwright-platform"
+version = "0.4.0"
+dependencies = [
+ "log",
+ "objc2-core-foundation",
+ "objc2-core-media",
+ "objc2-core-video",
+ "objc2-video-toolbox",
+ "reelwright-codecs",
+ "reelwright-color",
+ "reelwright-export",
+ "reelwright-frame",
+ "reelwright-isobmff",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-render",
+ "reelwright-testkit",
+ "reelwright-time",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "reelwright-project"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "reelwright-color",
+ "reelwright-geom",
+ "reelwright-media",
+ "reelwright-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-prores"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "reelwright-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-render"
+version = "0.4.0"
+dependencies = [
+ "image",
+ "rayon",
+ "reelwright-audio-dsp",
+ "reelwright-captions",
+ "reelwright-color",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-media",
+ "reelwright-project",
+ "reelwright-text",
+ "reelwright-time",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "reelwright-scopes"
+version = "0.4.0"
+dependencies = [
+ "reelwright-color",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "reelwright-speech"
+version = "0.4.0"
+dependencies = [
+ "candle-core",
+ "candle-nn",
+ "rayon",
+ "reelwright-project",
+ "reelwright-time",
+ "rustls",
+ "rustls-rustcrypto",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.21",
+ "ureq",
+]
+
+[[package]]
+name = "reelwright-testkit"
+version = "0.4.0"
+dependencies = [
+ "png",
+]
+
+[[package]]
+name = "reelwright-text"
+version = "0.4.0"
+dependencies = [
+ "harfrust",
+ "reelwright-color",
+ "skrifa",
+ "unicode-bidi",
+ "unicode-linebreak",
+]
+
+[[package]]
+name = "reelwright-time"
+version = "0.4.0"
+dependencies = [
+ "proptest",
+ "serde",
+]
+
+[[package]]
+name = "reelwright-ui-egui"
+version = "0.4.0"
+dependencies = [
+ "cpu-time",
+ "eframe",
+ "egui",
+ "egui_kittest",
+ "image",
+ "log",
+ "pollster 0.4.0",
+ "rayon",
+ "reelwright-audio-dsp",
+ "reelwright-codecs",
+ "reelwright-color",
+ "reelwright-edit",
+ "reelwright-engine",
+ "reelwright-frame",
+ "reelwright-geom",
+ "reelwright-gpu",
+ "reelwright-interchange",
+ "reelwright-media",
+ "reelwright-platform",
+ "reelwright-project",
+ "reelwright-render",
+ "reelwright-scopes",
+ "reelwright-text",
+ "reelwright-time",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "toml 1.1.6+spec-1.1.0",
+ "web-time",
+]
+
+[[package]]
+name = "reelwright-vp9"
+version = "0.4.0"
+dependencies = [
+ "rayon",
+ "reelwright-bitstream",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "reelwright-web"
+version = "0.4.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "log",
+ "reelwright-codecs",
+ "reelwright-color",
+ "reelwright-engine",
+ "reelwright-format",
+ "reelwright-frame",
+ "reelwright-isobmff",
+ "reelwright-media",
+ "reelwright-time",
+ "reelwright-ui-egui",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
+]
+
+[[package]]
 name = "ref-cast"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7241,7 +7241,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 name = "xtask"
 version = "0.4.0"
 dependencies = [
- "filmcraft-testkit",
+ "reelwright-testkit",
  "serde_json",
 ]
 

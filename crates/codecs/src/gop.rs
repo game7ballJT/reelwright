@@ -11,8 +11,8 @@ use std::time::Duration;
 
 use web_time::Instant;
 
-use filmcraft_color::ColorInfo;
-use filmcraft_frame::VideoFrame;
+use reelwright_color::ColorInfo;
+use reelwright_frame::VideoFrame;
 
 use crate::CodecError;
 use crate::video::VideoDecoder;
@@ -163,7 +163,7 @@ impl State {
             self.bytes = self.bytes.saturating_sub(f.byte_size());
             pool.bytes.fetch_sub(f.byte_size(), Ordering::Relaxed);
             EVICTED.fetch_add(1, Ordering::Relaxed);
-            filmcraft_frame::pool::recycle(f);
+            reelwright_frame::pool::recycle(f);
         }
     }
 
@@ -396,7 +396,7 @@ impl GopCache {
     /// container's display rotation is applied.
     fn finish(&self, mut f: VideoFrame) -> VideoFrame {
         if let Some(c) = self.explicit_color
-            && !matches!(f.data, filmcraft_frame::PixelData::Rgba8(_) | filmcraft_frame::PixelData::RgbaF32(_))
+            && !matches!(f.data, reelwright_frame::PixelData::Rgba8(_) | reelwright_frame::PixelData::RgbaF32(_))
         {
             f.color = c;
         }
@@ -416,7 +416,7 @@ impl GopCache {
         st.bytes += f.byte_size();
         if let Some(old) = st.frames.insert(pts, Arc::new(f)) {
             st.bytes -= old.byte_size();
-            filmcraft_frame::pool::recycle(old);
+            reelwright_frame::pool::recycle(old);
         }
         // evict frames far from the most recent (keep a window around the working position)
         while st.bytes > budget && st.frames.len() > 2 {
@@ -427,7 +427,7 @@ impl GopCache {
                 st.bytes -= v.byte_size();
                 EVICTED.fetch_add(1, Ordering::Relaxed);
                 // its planes serve the next decoded pictures instead of going back to the allocator
-                filmcraft_frame::pool::recycle(v);
+                reelwright_frame::pool::recycle(v);
             }
         }
         let pool = &self.shared.pool;
@@ -463,7 +463,7 @@ impl GopCache {
     /// (no other picture depends on them, so the wanted frame decodes exactly as it would
     /// otherwise; a later request for a skipped frame re-seeks).
     ///
-    /// Inside [`filmcraft_media::cancel::with_draft`]`(true, …)` the decoder runs in draft mode
+    /// Inside [`reelwright_media::cancel::with_draft`]`(true, …)` the decoder runs in draft mode
     /// ([`VideoDecoder::set_draft`]); its draft frames are cached for draft requests only, and an
     /// exact request for one re-decodes it.
     pub fn frame_late(&self, s: &dyn VideoSamples, target: i64, late_before: Option<i64>) -> crate::Result<Arc<VideoFrame>> {
@@ -474,7 +474,7 @@ impl GopCache {
         if DecodingGuard::active(me) {
             return self.private_frame(s, i, want_pts, n);
         }
-        let draft = filmcraft_media::cancel::draft();
+        let draft = reelwright_media::cancel::draft();
         // Idle caches' decoders released below. Declared before the lock guard, so it is dropped
         // after the guard on every return path: dropping a decoder can block (a hardware session
         // waits for its frames in flight) and must not hold this cache's lock.
@@ -497,7 +497,7 @@ impl GopCache {
         released.extend(self.shared.pool.trim_decoders(&self.shared));
         // Nothing cached: the work ahead (possibly a seek and a GOP of decoding) is only worth it
         // while someone still wants the frame.
-        if filmcraft_media::cancel::cancelled() {
+        if reelwright_media::cancel::cancelled() {
             return Err(CodecError::Cancelled);
         }
         if st.intra {
@@ -538,7 +538,7 @@ impl GopCache {
         };
         decoder.set_draft(draft);
         while st.next < limit {
-            if filmcraft_media::cancel::cancelled() {
+            if reelwright_media::cancel::cancelled() {
                 // The decoder state stays consistent (`next`, `out_max`): a later request continues.
                 return Err(CodecError::Cancelled);
             }
@@ -761,7 +761,7 @@ mod tests {
 
     fn index_of(f: &VideoFrame) -> usize {
         match &f.data {
-            filmcraft_frame::PixelData::Rgba8(d) => d[0] as usize | (d[1] as usize) << 8,
+            reelwright_frame::PixelData::Rgba8(d) => d[0] as usize | (d[1] as usize) << 8,
             _ => unreachable!(),
         }
     }
@@ -850,7 +850,7 @@ mod tests {
 
     fn is_draft(f: &VideoFrame) -> bool {
         match &f.data {
-            filmcraft_frame::PixelData::Rgba8(d) => d[2] == 1,
+            reelwright_frame::PixelData::Rgba8(d) => d[2] == 1,
             _ => unreachable!(),
         }
     }
@@ -862,7 +862,7 @@ mod tests {
         let before = gop_stats().draft;
         // reduced-resolution playback: odd (non-reference) pictures come out as drafts
         for i in 0..12usize {
-            let f = filmcraft_media::cancel::with_draft(true, || c.frame(&s, i as i64 * 1000)).expect("frame");
+            let f = reelwright_media::cancel::with_draft(true, || c.frame(&s, i as i64 * 1000)).expect("frame");
             assert_eq!(index_of(&f), i);
             assert_eq!(is_draft(&f), i % 2 == 1, "frame {i}");
         }
@@ -877,7 +877,7 @@ mod tests {
         assert!(!is_draft(&f) && index_of(&f) == 5);
         assert_eq!(s.resets.load(Ordering::Relaxed), 2, "re-decoded from the sync sample");
         // and a draft request takes the exact frame now cached
-        let f = filmcraft_media::cancel::with_draft(true, || c.frame(&s, 5_000)).expect("frame");
+        let f = reelwright_media::cancel::with_draft(true, || c.frame(&s, 5_000)).expect("frame");
         assert!(!is_draft(&f));
         // without the hint nothing is ever a draft
         let s2 = samples(300, 250, 3, false);
@@ -891,11 +891,11 @@ mod tests {
         let c = GopCache::new(None);
         assert_eq!(index_of(&c.frame(&s, 5_000).expect("frame")), 5);
         let flag = Arc::new(std::sync::atomic::AtomicBool::new(true));
-        let r = filmcraft_media::cancel::with_cancel(&flag, || c.frame(&s, 200_000));
+        let r = reelwright_media::cancel::with_cancel(&flag, || c.frame(&s, 200_000));
         assert!(matches!(r, Err(CodecError::Cancelled)));
         assert_eq!(s.decodes.load(Ordering::Relaxed), 6);
         // cached frames are still served, and the decoder carries on from where it was
-        let r = filmcraft_media::cancel::with_cancel(&flag, || c.frame(&s, 3_000));
+        let r = reelwright_media::cancel::with_cancel(&flag, || c.frame(&s, 3_000));
         assert_eq!(index_of(&r.expect("cached")), 3);
         assert_eq!(index_of(&c.frame(&s, 7_000).expect("frame")), 7);
         assert_eq!(s.resets.load(Ordering::Relaxed), 1);
@@ -1005,7 +1005,7 @@ mod tests {
 
     impl VideoDecoder for Big {
         fn decode(&mut self, _sample: &[u8], pts: i64) -> crate::Result<Vec<DecodedFrame>> {
-            let mut px = filmcraft_frame::pool::take_u8((BIG.0 * BIG.1 * 4) as usize);
+            let mut px = reelwright_frame::pool::take_u8((BIG.0 * BIG.1 * 4) as usize);
             px.resize((BIG.0 * BIG.1 * 4) as usize, (pts / 1000) as u8);
             Ok(vec![DecodedFrame { pts, frame: VideoFrame::rgba8(BIG.0, BIG.1, px), draft: false }])
         }
@@ -1046,7 +1046,7 @@ mod tests {
         // room for MIN_FRAMES pictures only
         let mut c = GopCache::new(None);
         c.budget = 0;
-        let reused = || filmcraft_frame::pool::stats().reused;
+        let reused = || reelwright_frame::pool::stats().reused;
         let before = reused();
         // the cache holds MIN_FRAMES pictures: none is evicted yet, every plane is new
         for i in 0..MIN_FRAMES as i64 {
@@ -1057,7 +1057,7 @@ mod tests {
         let more = 40;
         for i in MIN_FRAMES as i64..MIN_FRAMES as i64 + more {
             let f = c.frame(&s, i * 1000).expect("frame");
-            assert!(matches!(&f.data, filmcraft_frame::PixelData::Rgba8(d) if d.iter().all(|&b| b == i as u8)), "frame {i} has its own pixels");
+            assert!(matches!(&f.data, reelwright_frame::PixelData::Rgba8(d) if d.iter().all(|&b| b == i as u8)), "frame {i} has its own pixels");
         }
         assert!(reused() - before >= more as u64 - 2, "{} of {more} planes recycled", reused() - before);
     }

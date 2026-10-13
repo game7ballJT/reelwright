@@ -1,6 +1,6 @@
 [package]
-name = "filmcraft-ui-egui"
-description = "The FilmCraft egui frontend (swappable): panels, docking, timeline, monitors, control channel"
+name = "reelwright-ui-egui"
+description = "The Reelwright egui frontend (swappable): panels, docking, timeline, monitors, control channel"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,19 +10,19 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-filmcraft-time = { workspace = true }
-filmcraft-geom = { workspace = true }
-filmcraft-color = { workspace = true }
-filmcraft-frame = { workspace = true }
-filmcraft-media = { workspace = true }
-filmcraft-project = { workspace = true }
-filmcraft-edit = { workspace = true }
-filmcraft-render = { workspace = true }
-filmcraft-text = { workspace = true }
-filmcraft-audio-dsp = { workspace = true }
-filmcraft-engine = { workspace = true }
-filmcraft-gpu = { workspace = true }
-filmcraft-scopes = { workspace = true }
+reelwright-time = { workspace = true }
+reelwright-geom = { workspace = true }
+reelwright-color = { workspace = true }
+reelwright-frame = { workspace = true }
+reelwright-media = { workspace = true }
+reelwright-project = { workspace = true }
+reelwright-edit = { workspace = true }
+reelwright-render = { workspace = true }
+reelwright-text = { workspace = true }
+reelwright-audio-dsp = { workspace = true }
+reelwright-engine = { workspace = true }
+reelwright-gpu = { workspace = true }
+reelwright-scopes = { workspace = true }
 egui = { workspace = true }
 eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit"] }
 serde = { workspace = true }
@@ -30,7 +30,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 rayon = { workspace = true }
 web-time = "1"
-# ArtCraft wordmark (PNG) for the About dialog and Home screen.
+# The app icon (PNG) for the About dialog and Home screen.
 image = { version = "0.25", default-features = false, features = ["png"] }
 
 # Thread/process CPU clocks for frame-job profiling (safe wrappers; see frames.rs).
@@ -42,11 +42,11 @@ cpu-time = "1"
 
 [dev-dependencies]
 pollster = "0.4"
-filmcraft-codecs = { workspace = true }
+reelwright-codecs = { workspace = true }
 # the bench registers OS hardware decoders as the desktop app does (dev-dependency only: ui-egui
 # itself stays OS-independent and web-portable)
-filmcraft-platform = { workspace = true }
-filmcraft-interchange = { workspace = true }
+reelwright-platform = { workspace = true }
+reelwright-interchange = { workspace = true }
 egui_kittest = { workspace = true, features = ["eframe", "wgpu"] }
 
 # build.rs bakes contributors/contributors.json into the binary (About ▸ Contributors).

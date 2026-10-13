@@ -1,7 +1,7 @@
 //! Fixture locations and race-free generation.
 //!
 //! Fixtures live in `<workspace>/target/fixtures/<crate>/` whatever `CARGO_TARGET_DIR` is, so
-//! parallel agents with private target dirs share one generated set. `FILMCRAFT_FIXTURES_DIR`
+//! parallel agents with private target dirs share one generated set. `REELWRIGHT_FIXTURES_DIR`
 //! overrides the root. Media is never committed.
 
 use std::path::{Path, PathBuf};
@@ -11,12 +11,18 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 pub fn workspace_root() -> PathBuf {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = here.parent().and_then(Path::parent).unwrap_or(here);
-    root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
+    let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+    // Windows: `\\?\C:\dir` is the same folder as `C:\dir`, but a path built on it by appending
+    // `a/b` is rejected (os error 123): hand out the plain form
+    match root.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
+        Some(plain) if plain.as_bytes().get(1) == Some(&b':') => PathBuf::from(plain),
+        _ => root,
+    }
 }
 
-/// Root of all generated fixtures: `$FILMCRAFT_FIXTURES_DIR` or `<workspace>/target/fixtures`.
+/// Root of all generated fixtures: `$REELWRIGHT_FIXTURES_DIR` or `<workspace>/target/fixtures`.
 pub fn fixtures_root() -> PathBuf {
-    match std::env::var_os("FILMCRAFT_FIXTURES_DIR").filter(|v| !v.is_empty()) {
+    match std::env::var_os("REELWRIGHT_FIXTURES_DIR").filter(|v| !v.is_empty()) {
         Some(d) => PathBuf::from(d),
         None => workspace_root().join("target").join("fixtures"),
     }
@@ -122,7 +128,7 @@ mod tests {
 
     #[test]
     fn generate_is_cached_and_atomic() {
-        let dir = std::env::temp_dir().join(format!("filmcraft-testkit-gen-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("reelwright-testkit-gen-{}", std::process::id()));
         let out = dir.join("f.bin");
         let _ = std::fs::remove_file(&out);
         assert!(generate(&out, |_| false).is_none());

@@ -1,4 +1,4 @@
-# filmcraft-ac3
+# reelwright-ac3
 
 Clean-room AC-3 (Dolby Digital) audio decoder in pure Rust. Layer L0: depends only on
 `thiserror`. Builds for `wasm32-unknown-unknown`; no `unsafe`. No GPL/LGPL code (FFmpeg,
@@ -16,8 +16,8 @@ window (α = 5) and checked against Table 7.33 to 6·10⁻⁶.
 ## API
 
 ```rust
-let mut dec = filmcraft_ac3::Decoder::new();
-let h = filmcraft_ac3::parse_header(frame)?;   // rate, channels, frame size
+let mut dec = reelwright_ac3::Decoder::new();
+let h = reelwright_ac3::parse_header(frame)?;   // rate, channels, frame size
 let out = dec.decode(frame)?;                  // 1536 samples per channel, WAV channel order
 dec.reset();                                    // before decoding from another position
 ```

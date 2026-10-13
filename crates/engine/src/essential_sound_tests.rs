@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use filmcraft_audio_dsp::LoudnessMeter;
-use filmcraft_project::{AudioType, ClipId, TrackItem};
-use filmcraft_time::Tick;
+use reelwright_audio_dsp::LoudnessMeter;
+use reelwright_project::{AudioType, ClipId, TrackItem};
+use reelwright_time::Tick;
 use serde_json::{Value, json};
 
 use super::*;
@@ -88,7 +88,7 @@ fn mix(s: &Session, a: i64, n: usize, chunk: usize) -> [Vec<f32>; 2] {
     let mut pos = a;
     while pos < a + n as i64 {
         let m = chunk.min((a + n as i64 - pos) as usize);
-        let b = filmcraft_render::audio::mix_sequence(&s.project, seq, pos, m, &provider);
+        let b = reelwright_render::audio::mix_sequence(&s.project, seq, pos, m, &provider);
         out[0].extend_from_slice(&b.channels[0]);
         out[1].extend_from_slice(&b.channels[1]);
         pos += m as i64;
@@ -112,7 +112,7 @@ fn clip_out(s: &Session, c: ClipId) -> [Vec<f32>; 2] {
     let mut pos = a0;
     while pos < a0 + n as i64 {
         let m = 4800.min((a0 + n as i64 - pos) as usize);
-        let b = filmcraft_render::audio::clip_signal(&it, pos, m, SR, &provider).unwrap();
+        let b = reelwright_render::audio::clip_signal(&it, pos, m, SR, &provider).unwrap();
         out[0].extend_from_slice(&b[0]);
         out[1].extend_from_slice(&b[1]);
         pos += m as i64;
@@ -434,7 +434,7 @@ fn rendered_mix_is_identical_however_requests_are_cut_and_matches_export() {
     let path = dir.join("es.wav");
     s.execute("file.exportMedia", json!({"path": path.to_string_lossy(), "format": "wav", "wait": true})).unwrap();
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_media::open_bytes("es.wav", bytes, &[]).unwrap();
+    let src = reelwright_media::open_bytes("es.wav", bytes, &[]).unwrap();
     let back = src.audio(0, n, SR).unwrap();
     let d = (0..n).map(|i| (back.channels[0][i] - whole[0][i]).abs().max((back.channels[1][i] - whole[1][i]).abs())).fold(0.0f32, f32::max);
     println!("export vs render: max diff {d:e}");
@@ -442,7 +442,7 @@ fn rendered_mix_is_identical_however_requests_are_cut_and_matches_export() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `cargo test --release -p filmcraft-engine essential_sound_tests::perf -- --ignored --nocapture`
+/// `cargo test --release -p reelwright-engine essential_sound_tests::perf -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn perf_full_dialogue_chain_realtime_factor() {

@@ -1,9 +1,9 @@
 use super::*;
-use filmcraft_media::generators::GeneratorSource;
-use filmcraft_media::{FrameRequest, Generator, MediaSource};
-use filmcraft_project::{ItemKind, Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
-use filmcraft_render::SourceMap;
-use filmcraft_time::TICKS_PER_SECOND;
+use reelwright_media::generators::GeneratorSource;
+use reelwright_media::{FrameRequest, Generator, MediaSource};
+use reelwright_project::{ItemKind, Label, MediaClip, MediaRef, SequenceSettings, TrackKind};
+use reelwright_render::SourceMap;
+use reelwright_time::TICKS_PER_SECOND;
 
 pub(crate) fn project() -> (Arc<Project>, ItemId, SourceMap) {
     let mut p = Project::new("x");
@@ -57,7 +57,7 @@ fn mjpeg_mov_roundtrip() {
     assert_eq!(r.frames, 24);
     assert!(prog.finished.load(Ordering::Relaxed));
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_codecs::open_bytes("out.mov", bytes).unwrap();
+    let src = reelwright_codecs::open_bytes("out.mov", bytes).unwrap();
     let info = src.info();
     assert_eq!(info.video.as_ref().unwrap().width, 320);
     assert!((info.duration.seconds() - 1.0).abs() < 0.05, "{}", info.duration.seconds());
@@ -66,7 +66,7 @@ fn mjpeg_mov_roundtrip() {
     let a = src.audio(0, 24_000, 48_000).unwrap();
     let pk = a.peaks()[0];
     assert!((pk - 0.5).abs() < 0.05, "tone at -6 dB: {pk}");
-    if let Some(ffprobe) = filmcraft_testkit::ffprobe_or_skip("export mjpeg frame count") {
+    if let Some(ffprobe) = reelwright_testkit::ffprobe_or_skip("export mjpeg frame count") {
         let out = std::process::Command::new(ffprobe)
             .args(["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", &path])
             .output()
@@ -95,7 +95,7 @@ fn prores_export_roundtrip() {
     let path = tmp("pr.mov");
     export(&p, seq, &ExportSettings { format: Format::ProRes, path: path.clone(), ..Default::default() }, &m, &Progress::default()).unwrap();
     let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-    let src = filmcraft_codecs::open_bytes("pr.mov", bytes).unwrap();
+    let src = reelwright_codecs::open_bytes("pr.mov", bytes).unwrap();
     assert!(src.info().video.as_ref().unwrap().codec.contains("ProRes 422 HQ"));
     let f = src.video_frame(FrameRequest::full(Tick(TICKS_PER_SECOND / 3))).unwrap().to_rgba8();
     assert!(f[0] > 240 && f[1] < 15 && f[2] < 15, "{:?}", &f[..4]);
@@ -109,7 +109,7 @@ fn dnxhr_export_roundtrip() {
         let s = ExportSettings { format: Format::DnxHr, path: path.clone(), dnx_profile: profile.into(), ..Default::default() };
         export(&p, seq, &s, &m, &Progress::default()).unwrap();
         let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-        let src = filmcraft_codecs::open_bytes("dnx.mov", bytes).unwrap();
+        let src = reelwright_codecs::open_bytes("dnx.mov", bytes).unwrap();
         let info = src.info().video.clone().unwrap();
         assert_eq!(info.codec, label);
         let f = src.video_frame(FrameRequest::full(Tick(TICKS_PER_SECOND / 3))).unwrap();
@@ -151,11 +151,11 @@ fn caption_burn_in_h264_ffmpeg_oracle() {
     let r = FrameRate::FPS_24;
     let seq = p.new_sequence("s", SequenceSettings { width: w, height: h, frame_rate: r, ..Default::default() }, 1, 0, None);
     let v = p.make_track_item(matte, TrackKind::Video, Tick::ZERO, TimeRange::new(Tick::ZERO, r.tick_of(24)), r).unwrap();
-    let tid = filmcraft_project::TrackId(p.alloc_id());
-    let cid = filmcraft_project::ClipId(p.alloc_id());
-    let mut ct = filmcraft_project::CaptionTrack::new(tid, "Subtitle".into(), filmcraft_project::CaptionFormat::Subtitle);
+    let tid = reelwright_project::TrackId(p.alloc_id());
+    let cid = reelwright_project::ClipId(p.alloc_id());
+    let mut ct = reelwright_project::CaptionTrack::new(tid, "Subtitle".into(), reelwright_project::CaptionFormat::Subtitle);
     ct.style.background = false;
-    ct.captions.push(filmcraft_project::Caption {
+    ct.captions.push(reelwright_project::Caption {
         id: cid,
         start: Tick::ZERO,
         duration: r.tick_of(24),
@@ -201,7 +201,7 @@ fn caption_burn_in_h264_ffmpeg_oracle() {
 /// picture survives the round trip.
 #[test]
 fn hdr_exports_signal_pq_and_hlg() {
-    use filmcraft_color::{ColorPipeline, Transfer, WorkingSpace};
+    use reelwright_color::{ColorPipeline, Transfer, WorkingSpace};
     for (ws, fmt, ext, transfer, ff_transfer) in [
         (WorkingSpace::Rec2100Pq, Format::ProRes, "mov", Transfer::Pq, "smpte2084"),
         (WorkingSpace::Rec2100Pq, Format::H264, "mp4", Transfer::Pq, "smpte2084"),
@@ -217,11 +217,11 @@ fn hdr_exports_signal_pq_and_hlg() {
         export(&p, seq, &s, &m, &Progress::default()).unwrap();
         // our demuxer/decoder sees the signalling
         let bytes: Arc<[u8]> = std::fs::read(&path).unwrap().into();
-        let src = filmcraft_codecs::open_bytes(&path, bytes).unwrap();
+        let src = reelwright_codecs::open_bytes(&path, bytes).unwrap();
         let v = src.info().video.clone().unwrap();
         assert_eq!(v.color.transfer, transfer, "{path}");
-        assert_eq!(v.color.primaries, filmcraft_color::Primaries::Bt2020, "{path}");
-        assert_eq!(v.color.matrix, filmcraft_color::Matrix::Bt2020Ncl, "{path}");
+        assert_eq!(v.color.primaries, reelwright_color::Primaries::Bt2020, "{path}");
+        assert_eq!(v.color.matrix, reelwright_color::Matrix::Bt2020Ncl, "{path}");
         // PQ exports carry mastering metadata (1000 cd/m² peak; MaxCLL 0 = unknown), which sets
         // the tone-mapping peak when the file is used again
         if transfer == Transfer::Pq {
@@ -230,11 +230,11 @@ fn hdr_exports_signal_pq_and_hlg() {
         }
         // 709 red matte → BT.2020 HDR → decoded back into Rec. 709 (tone mapped) stays red
         let f = src.video_frame(FrameRequest::full(Tick::ZERO)).unwrap();
-        let back = filmcraft_render::colorman::decode(&Project::new("x"), ItemId(0), &f, 1, &ColorPipeline::REC709);
-        let c = filmcraft_render::Image::unpremul(back.get(160, 90));
+        let back = reelwright_render::colorman::decode(&Project::new("x"), ItemId(0), &f, 1, &ColorPipeline::REC709);
+        let c = reelwright_render::Image::unpremul(back.get(160, 90));
         assert!(c[0] > 0.6 && c[1] < 0.05 && c[2] < 0.05, "{path}: {c:?}");
         // ffprobe agrees
-        let Some(ffprobe) = filmcraft_testkit::ffprobe_or_skip("hdr export signalling") else { continue };
+        let Some(ffprobe) = reelwright_testkit::ffprobe_or_skip("hdr export signalling") else { continue };
         let out = std::process::Command::new(&ffprobe)
             .args([
                 "-v",

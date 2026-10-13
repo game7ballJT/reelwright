@@ -1,5 +1,5 @@
 [package]
-name = "filmcraft-gpu"
+name = "reelwright-gpu"
 description = "wgpu compositor: YUV/RGB layer sampling, linear-light premultiplied compositing in WGSL"
 version.workspace = true
 edition.workspace = true
@@ -10,10 +10,10 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-filmcraft-color = { workspace = true }
-filmcraft-frame = { workspace = true }
-filmcraft-geom = { workspace = true }
-filmcraft-render = { workspace = true }
+reelwright-color = { workspace = true }
+reelwright-frame = { workspace = true }
+reelwright-geom = { workspace = true }
+reelwright-render = { workspace = true }
 wgpu = { version = "30", default-features = false, features = ["wgsl"] }
 log = { workspace = true }
 rayon = { workspace = true }
@@ -21,6 +21,6 @@ rayon = { workspace = true }
 [dev-dependencies]
 pollster = "0.4"
 wgpu = { version = "30", features = ["wgsl", "metal", "vulkan", "dx12", "gles"] }
-filmcraft-media = { workspace = true }
-filmcraft-project = { workspace = true }
-filmcraft-time = { workspace = true }
+reelwright-media = { workspace = true }
+reelwright-project = { workspace = true }
+reelwright-time = { workspace = true }

@@ -16,11 +16,11 @@
 //! `guides.save.*`, `guides.manage.*`.
 
 use egui::{Align2, Color32, Rect, Sense, Stroke, Vec2, pos2, vec2};
-use filmcraft_project::ItemId;
-use filmcraft_time::{Tick, TimeDisplay, format_time};
+use reelwright_project::ItemId;
+use reelwright_time::{Tick, TimeDisplay, format_time};
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::dock::PanelKind;
 use crate::frames::Rgba;
 use crate::panels::monitor::Which;
@@ -60,16 +60,16 @@ pub fn prefix(w: Which) -> &'static str {
     if w == Which::Program { "program" } else { "source" }
 }
 
-pub fn view(app: &FilmcraftApp, w: Which) -> &MonitorView {
+pub fn view(app: &ReelwrightApp, w: Which) -> &MonitorView {
     if w == Which::Program { &app.ui.program } else { &app.ui.source }
 }
 
-pub fn view_mut(app: &mut FilmcraftApp, w: Which) -> &mut MonitorView {
+pub fn view_mut(app: &mut ReelwrightApp, w: Which) -> &mut MonitorView {
     if w == Which::Program { &mut app.ui.program } else { &mut app.ui.source }
 }
 
 /// The monitor a `view.*` command acts on: `params.monitor`, else the focused monitor.
-fn which_of(app: &FilmcraftApp, params: &Value) -> Which {
+fn which_of(app: &ReelwrightApp, params: &Value) -> Which {
     match params.get("monitor").and_then(Value::as_str) {
         Some("source") => Which::Source,
         Some("program") => Which::Program,
@@ -83,14 +83,14 @@ fn toggled(cur: bool, params: &Value) -> bool {
 }
 
 /// Frame size of a monitor's picture (sequence or source item), if it shows video.
-fn frame_size(app: &FilmcraftApp, w: Which) -> Option<(u32, u32)> {
+fn frame_size(app: &ReelwrightApp, w: Which) -> Option<(u32, u32)> {
     match w {
         Which::Program => app.session.active_sequence().map(|q| (q.settings.width, q.settings.height)),
         Which::Source => {
             let pi = app.session.project.item(app.session.state.source_item?)?;
             match &pi.kind {
-                filmcraft_project::ItemKind::Media(m) => m.info.video.as_ref().map(|v| (v.width, v.height)),
-                filmcraft_project::ItemKind::Sequence(s) => Some((s.settings.width, s.settings.height)),
+                reelwright_project::ItemKind::Media(m) => m.info.video.as_ref().map(|v| (v.width, v.height)),
+                reelwright_project::ItemKind::Sequence(s) => Some((s.settings.width, s.settings.height)),
                 _ => Some((1920, 1080)),
             }
         }
@@ -98,7 +98,7 @@ fn frame_size(app: &FilmcraftApp, w: Which) -> Option<(u32, u32)> {
 }
 
 /// Handle a `view.*` command (None for other ids).
-pub fn route(app: &mut FilmcraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn route(app: &mut ReelwrightApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let rest = id.strip_prefix("view.")?;
     let w = which_of(app, params);
     let pfx = prefix(w);
@@ -226,7 +226,7 @@ pub fn route(app: &mut FilmcraftApp, id: &str, params: &Value) -> Option<Result<
     Some(r)
 }
 
-fn set_display(app: &mut FilmcraftApp, w: Which, d: &str) -> Result<Value, String> {
+fn set_display(app: &mut ReelwrightApp, w: Which, d: &str) -> Result<Value, String> {
     if d == "multicam" {
         app.ui.program.multicam = true;
         return Ok(json!({"monitor": "program", "display": "multicam"}));
@@ -250,7 +250,7 @@ fn set_display(app: &mut FilmcraftApp, w: Which, d: &str) -> Result<Value, Strin
     Ok(json!({"monitor": prefix(w), "display": d}))
 }
 
-fn save_template(app: &mut FilmcraftApp, w: Which, name: &str) -> Result<Value, String> {
+fn save_template(app: &mut ReelwrightApp, w: Which, name: &str) -> Result<Value, String> {
     let name = name.trim();
     if name.is_empty() {
         return Err("the template needs a name".into());
@@ -258,13 +258,13 @@ fn save_template(app: &mut FilmcraftApp, w: Which, name: &str) -> Result<Value, 
     let guides = view(app, w).guides.clone();
     let mut next = app.session.prefs.clone();
     next.guides.templates.retain(|t| t.name != name);
-    next.guides.templates.push(filmcraft_engine::autosave::GuideTemplate { name: name.to_string(), guides });
+    next.guides.templates.push(reelwright_engine::autosave::GuideTemplate { name: name.to_string(), guides });
     app.session.set_prefs(next).map_err(|e| format!("saving preferences: {e}"))?;
     Ok(json!({"saved": name}))
 }
 
 /// Menu checkmark state of a `view.*` command (None = not a toggle / radio item).
-pub fn checked(app: &FilmcraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &ReelwrightApp, id: &str) -> Option<bool> {
     let rest = id.strip_prefix("view.")?;
     let w = which_of(app, &Value::Null);
     let v = view(app, w);
@@ -301,7 +301,7 @@ pub fn checked(app: &FilmcraftApp, id: &str) -> Option<bool> {
 }
 
 /// Menu enablement of a `view.*` command.
-pub fn enabled(app: &FilmcraftApp, id: &str) -> bool {
+pub fn enabled(app: &ReelwrightApp, id: &str) -> bool {
     let v = view(app, which_of(app, &Value::Null));
     match id {
         "view.lockGuides" | "view.clearGuides" | "view.guideTemplates.save" => !v.guides.is_empty(),
@@ -344,7 +344,7 @@ pub fn picture_rect(area: Rect, fw: f32, fh: f32, v: &MonitorView, ppp: f32) -> 
 }
 
 /// Pan a magnified picture: scroll over it, or drag with the Hand tool.
-pub fn pan_input(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which, area: Rect, pic: Rect) {
+pub fn pan_input(app: &mut ReelwrightApp, ui: &mut egui::Ui, w: Which, area: Rect, pic: Rect) {
     if view(app, w).zoom.is_none() {
         return;
     }
@@ -383,7 +383,7 @@ pub fn snap_axis(edges: [f32; 3], targets: &[f32], thr: f32) -> Option<(f32, f32
 
 /// Snap in Program Monitor: adjust a drag offset so the moved box's edges or centre meet the
 /// frame edges / centre or a guide. Returns the offset and the lines snapped to (vertical?, coord).
-pub fn snap_move(app: &FilmcraftApp, pic: Rect, frame: (u32, u32), moving: Rect, off: Vec2) -> (Vec2, Vec<(bool, f32)>) {
+pub fn snap_move(app: &ReelwrightApp, pic: Rect, frame: (u32, u32), moving: Rect, off: Vec2) -> (Vec2, Vec<(bool, f32)>) {
     let v = &app.ui.program;
     if !v.snap {
         return (off, Vec::new());
@@ -433,7 +433,7 @@ struct NewGuide {
 /// Rulers (frame pixels) along the top and left of the picture area; drag out of a ruler to add a
 /// guide (top ruler → horizontal guide, left ruler → vertical guide).
 #[allow(clippy::too_many_arguments)]
-pub fn rulers(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which, top: Rect, left: Rect, area: Rect, pic: Rect, frame: (u32, u32)) {
+pub fn rulers(app: &mut ReelwrightApp, ui: &mut egui::Ui, w: Which, top: Rect, left: Rect, area: Rect, pic: Rect, frame: (u32, u32)) {
     let t = app.tokens;
     let pfx = prefix(w);
     let p = ui.painter().clone();
@@ -495,7 +495,7 @@ pub fn rulers(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which, top: Rect, le
 
 /// Draw the guides; drag an unlocked guide to move it, or back onto a ruler (out of the picture
 /// area) to remove it.
-pub fn guides(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which, area: Rect, pic: Rect, frame: (u32, u32)) {
+pub fn guides(app: &mut ReelwrightApp, ui: &mut egui::Ui, w: Which, area: Rect, pic: Rect, frame: (u32, u32)) {
     let v = view(app, w).clone();
     if !v.show_guides || v.guides.is_empty() {
         return;
@@ -544,7 +544,7 @@ pub fn guides(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which, area: Rect, p
 /// split view): click to move the source playhead.
 #[allow(clippy::too_many_arguments)]
 pub fn waveform(
-    app: &mut FilmcraftApp,
+    app: &mut ReelwrightApp,
     ui: &mut egui::Ui,
     area: Rect,
     item: ItemId,
@@ -606,10 +606,10 @@ pub fn waveform(
 }
 
 /// Ticks per 48 kHz sample (the waveform peaks are 256-sample min/max pairs at 48 kHz).
-const TICKS_PER_SAMPLE_48K: f64 = filmcraft_time::TICKS_PER_SECOND as f64 / 48_000.0;
+const TICKS_PER_SAMPLE_48K: f64 = reelwright_time::TICKS_PER_SECOND as f64 / 48_000.0;
 
 /// Comparison View: the reference side's label, timecode and step / set buttons.
-pub fn compare_bar(app: &mut FilmcraftApp, ui: &mut egui::Ui, bar: Rect, rate: filmcraft_time::FrameRate, drop_frame: bool) {
+pub fn compare_bar(app: &mut ReelwrightApp, ui: &mut egui::Ui, bar: Rect, rate: reelwright_time::FrameRate, drop_frame: bool) {
     let t = app.tokens;
     let rf = Tick(app.ui.program.compare_ref.unwrap_or(app.session.playhead().0));
     let tc = format_time(rf, rate, drop_frame, TimeDisplay::Timecode, 48000);
@@ -643,7 +643,7 @@ fn pick(ui: &mut egui::Ui, out: &mut Picks, key: &str, label: &str, on: bool) {
 }
 
 /// The view items of a monitor's wrench menu (display modes, resolutions, rulers, guides, snap).
-pub fn wrench_items(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which) {
+pub fn wrench_items(app: &mut ReelwrightApp, ui: &mut egui::Ui, w: Which) {
     let v = view(app, w).clone();
     let mode = v.display_mode();
     let mut out: Picks = Vec::new();
@@ -698,7 +698,7 @@ pub fn wrench_items(app: &mut FilmcraftApp, ui: &mut egui::Ui, w: Which) {
 }
 
 /// The magnification popup of a monitor's zoom dropdown.
-pub fn zoom_menu(app: &mut FilmcraftApp, resp: &egui::Response, w: Which) {
+pub fn zoom_menu(app: &mut ReelwrightApp, resp: &egui::Response, w: Which) {
     let zoom = view(app, w).zoom;
     let mut out: Picks = Vec::new();
     egui::Popup::menu(resp).show(|ui| {
@@ -725,7 +725,7 @@ fn push(e: &mut Elems, id: &str, r: &egui::Response, label: &str) {
 }
 
 /// Add Guide… / Save Guides as Template… / Manage Guides… dialogs.
-pub fn dialogs(app: &mut FilmcraftApp, ctx: &egui::Context) {
+pub fn dialogs(app: &mut ReelwrightApp, ctx: &egui::Context) {
     let Some(mut d) = app.ui.guide_dialog.clone() else { return };
     let mut elems: Elems = Vec::new();
     let mut close = ctx.input(|i| i.key_pressed(egui::Key::Escape));

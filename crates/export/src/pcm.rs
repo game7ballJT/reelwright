@@ -117,9 +117,11 @@ mod tests {
 
     #[test]
     fn sequence_names() {
-        assert_eq!(image_sequence_path("/a/Sequence 01.png", 0, 24), "/a/Sequence 01000.png");
-        assert_eq!(image_sequence_path("/a/x.tif", 1234, 2000), "/a/x1234.tif");
-        assert_eq!(image_sequence_path("shot.bmp", 7, 10), "shot007.bmp");
+        // (the folder is joined with the platform's separator)
+        let path = |p: &str, frame, total| image_sequence_path(p, frame, total).replace('\\', "/");
+        assert_eq!(path("/a/Sequence 01.png", 0, 24), "/a/Sequence 01000.png");
+        assert_eq!(path("/a/x.tif", 1234, 2000), "/a/x1234.tif");
+        assert_eq!(path("shot.bmp", 7, 10), "shot007.bmp");
     }
 
     #[test]

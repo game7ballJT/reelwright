@@ -26,20 +26,20 @@ macOS.
 ## 2. Build and run
 
 ```sh
-cargo run --release -p filmcraft                      # desktop app with the demo project
-cargo run --release -p filmcraft -- --empty           # start without the demo project
-cargo run --release -p filmcraft -- --control 9876    # plus the JSON-lines control server
-cargo run --release -p filmcraft -- a.mp4 b.wav       # import media (or open a .fcproj)
-cargo run --release -p filmcraft-cli -- commands      # list engine commands
-cargo run --release -p filmcraft-cli -- render --demo --seconds 3 --out frame.png
-cargo run --release -p filmcraft-cli -- mcp --demo    # headless MCP server on stdio
+cargo run --release -p reelwright                      # desktop app with the demo project
+cargo run --release -p reelwright -- --empty           # start without the demo project
+cargo run --release -p reelwright -- --control 9876    # plus the JSON-lines control server
+cargo run --release -p reelwright -- a.mp4 b.wav       # import media (or open a .fcproj)
+cargo run --release -p reelwright-cli -- commands      # list engine commands
+cargo run --release -p reelwright-cli -- render --demo --seconds 3 --out frame.png
+cargo run --release -p reelwright-cli -- mcp --demo    # headless MCP server on stdio
 cargo xtask web --serve 8765                          # the web app on http://127.0.0.1:8765/ (docs/web.md)
 ```
 
-`FILMCRAFT_CONTROL_PORT=9876` works like `--control 9876`, and `FILMCRAFT_CPU_COMPOSITE=1`
+`REELWRIGHT_CONTROL_PORT=9876` works like `--control 9876`, and `REELWRIGHT_CPU_COMPOSITE=1`
 disables the GPU compositor.
-`filmcraft --help` lists the app's options. An option it does not know, or a control port that is
-not a number (from `--control` or from `FILMCRAFT_CONTROL_PORT`), is an error on stderr with exit
+`reelwright --help` lists the app's options. An option it does not know, or a control port that is
+not a number (from `--control` or from `REELWRIGHT_CONTROL_PORT`), is an error on stderr with exit
 code 2 instead of a window.
 
 Dev builds compile dependencies at `opt-level = 2` and workspace crates at `opt-level = 1`. For
@@ -48,21 +48,21 @@ playback and codec speed, use `--release`.
 ### Building with craft-fonts
 
 Font assets live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), never in this
-repo ([standard](https://github.com/storytold/craftrules/blob/main/standards/fonts.md)). It is an optional build input, not a Cargo
+repo (standard). It is an optional build input, not a Cargo
 dependency:
 
 ```sh
 git clone https://github.com/storytold/craft-fonts ../craft-fonts
-CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo run --release -p filmcraft
+CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo run --release -p reelwright
 ```
 
 Use an absolute path: `build.rs` runs in `crates/text`, so a relative `CRAFT_FONTS_DIR` would
 resolve from there. `crates/text/build.rs` reads its `fonts/manifest.txt` and embeds the fonts as
-`filmcraft_text::fonts::CRAFT_FONTS` (native: all of them; the web build: only BIZ UDPGothic
+`reelwright_text::fonts::CRAFT_FONTS` (native: all of them; the web build: only BIZ UDPGothic
 Regular, to keep the wasm small). The Japanese ones become the last fallback of every UI font family
 (`crates/ui-egui/src/theme.rs`, BIZ UDPGothic first) and fallback faces in the text engine (Gothic
 for sans text, Mincho for serif text). Without `CRAFT_FONTS_DIR`, `CRAFT_FONTS` is empty and
-FilmCraft uses its bundled and system fonts. A `CRAFT_FONTS_DIR` that is not a checkout is a build
+Reelwright uses its bundled and system fonts. A `CRAFT_FONTS_DIR` that is not a checkout is a build
 warning, or an error with `CRAFT_FONTS_REQUIRED=1` (release builds set both). Tests on these fonts'
 glyphs skip when it is empty; when you touch fonts, run the gates both with and without it.
 
@@ -77,7 +77,7 @@ Every commit must pass all of these:
 | Tests | `cargo test --workspace` |
 | Layering | `cargo xtask layers` |
 | Assets | `cargo xtask assets` |
-| wasm | `cargo xtask wasm` (checks every L0–L4 crate, `filmcraft-ui-egui` and `filmcraft-web` for `wasm32-unknown-unknown`) |
+| wasm | `cargo xtask wasm` (checks every L0–L4 crate, `reelwright-ui-egui` and `reelwright-web` for `wasm32-unknown-unknown`) |
 | All of the above | `cargo xtask ci` (runs clippy and tests with `--release`) |
 
 Run them with `CRAFT_FONTS_DIR` set too when you change font code ([craft-fonts](#building-with-craft-fonts)).
@@ -108,8 +108,8 @@ comes with a regression test; parsers, decoders and commands get fuzz / hostile-
 ## 5. Parallel work (several agents or worktrees)
 
 ```sh
-git worktree add ../filmcraft-hevc -b hevc-work
-cd ../filmcraft-hevc
+git worktree add ../reelwright-hevc -b hevc-work
+cd ../reelwright-hevc
 export CARGO_TARGET_DIR=target/agent-hevc     # separate build dir, no lock fights
 ```
 
@@ -117,7 +117,7 @@ export CARGO_TARGET_DIR=target/agent-hevc     # separate build dir, no lock figh
 - The workspace includes `crates/*` and `apps/*` by glob, so one broken `Cargo.toml` breaks every
   build. Keep every manifest valid at all times, including half-finished crates.
 - Test fixtures always go to `<repo>/target/fixtures/`, whatever `CARGO_TARGET_DIR` says.
-- `.mcp.json` points at `target/release/filmcraft-cli`. With a custom target dir, use your own path.
+- `.mcp.json` points at `target/release/reelwright-cli`. With a custom target dir, use your own path.
 
 ## 6. How to add…
 
@@ -139,13 +139,13 @@ export CARGO_TARGET_DIR=target/agent-hevc     # separate build dir, no lock figh
    - Read time with `time_p` so `time`, `frame`, `seconds` and `timecode` all work.
    - Mutate only through `s.edit(…)` or `s.edit_sequence(…)`, so the change is undoable and
      validated.
-   - Put pure timeline logic in `filmcraft-edit` as a function on `&mut Sequence`, with unit or
+   - Put pure timeline logic in `reelwright-edit` as a function on `&mut Sequence`, with unit or
      property tests there.
 2. Add tests to `crates/engine/src/tests.rs`: execute, assert, undo, redo, and check the disabled
    case.
 3. Frontend-only actions (tools, zoom, panels) go in `UI_COMMANDS` in
    `crates/ui-egui/src/menus.rs` with a branch in `menus::invoke`.
-4. The command now appears in menus (from `menu`), shortcuts, `filmcraft-cli commands`,
+4. The command now appears in menus (from `menu`), shortcuts, `reelwright-cli commands`,
    `engine.commands` and MCP `command_list` without further work.
 
 ### A video effect
@@ -189,7 +189,7 @@ stream is cut into blocks (there are tests for this).
 1. **Spec first.** Work only from the public specification (ITU-T, ISO/IEC, IETF RFCs, SMPTE,
    published container specs). Never copy GPL/LGPL code, and follow AGENTS.md §2 on reading other
    implementations. Name the spec edition in the crate README.
-2. Create `crates/<name>` as an L0 crate that depends only on `filmcraft-bitstream` (plus
+2. Create `crates/<name>` as an L0 crate that depends only on `reelwright-bitstream` (plus
    `thiserror` and optional `rayon` behind a `threads` feature). Add `[lints] workspace = true`, add
    it to `[workspace.dependencies]`, and add it to `LAYERS` in `xtask/src/main.rs`. It must build
    for wasm32.
@@ -229,14 +229,14 @@ In short:
   traced or "inspired-by" copies.
 - Open licences only (MIT, Apache-2.0, BSD, ISC, zlib, OFL, CC0, CC BY, CC BY-SA, or your own
   work under MIT OR Apache-2.0). No NC or ND licences. If the licence is unclear, leave the asset out.
-- Screenshots show only FilmCraft (or other open projects) with media we generated or that is
+- Screenshots show only Reelwright (or other open projects) with media we generated or that is
   openly licensed.
 
 - **Fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), not here.**
   Don't commit new font files to this repo (the Latin UI fonts already in `assets/fonts/` stay): add
   the font to craft-fonts (file, licence, manifest line, `ATTRIBUTION.md` row) and use it through
-  `filmcraft_text::fonts::CRAFT_FONTS`. See [Building with craft-fonts](#building-with-craft-fonts)
-  and [`craftrules/standards/fonts.md`](https://github.com/storytold/craftrules/blob/main/standards/fonts.md).
+  `reelwright_text::fonts::CRAFT_FONTS`. See [Building with craft-fonts](#building-with-craft-fonts)
+  and `craftrules/standards/fonts.md`.
 
 For each asset file `X`, commit a sidecar `X.attribution`. This is the real one for
 `assets/fonts/Inter-Regular.ttf`:

@@ -1,11 +1,11 @@
-// FilmCraft GPU compositor.
+// Reelwright GPU compositor.
 // Layers are drawn as transformed quads; the fragment shader samples the source (YUV planes or
 // RGBA) with manual bilinear filtering (textureLoad, so any float format works) and N×N
 // supersampling over the pixel footprint when minifying, converts to linear light, premultiplies
 // and scales by opacity. Normal layers blend into the Rgba16Float accumulator with fixed-function
 // premultiplied "over"; Dissolve does too (each pixel is either dropped or drawn opaque). The other
 // blend modes (`fs_blend`) read the accumulator under the layer from a copy (`backdrop`) and write
-// the composited result, with the math of `filmcraft_render::blend::composite`.
+// the composited result, with the math of `reelwright_render::blend::composite`.
 
 struct U {
     m0: vec4<f32>,   // a b c d
@@ -14,7 +14,7 @@ struct U {
     p0: vec4<f32>,   // opacity, kind (0 rgba8 srgb straight, 1 rgba16f premul linear, 2 yuv), taps, transfer (0 srgb, 1 linear, 2 pq, 3 hlg)
     p1: vec4<f32>,   // y_off y_scale c_off c_scale (code units)
     p2: vec4<f32>,   // kr kb code_scale footprint
-    p3: vec4<f32>,   // blend mode (index into filmcraft_render::Blend::ALL), alpha-plane scale (0: none), unused ×2
+    p3: vec4<f32>,   // blend mode (index into reelwright_render::Blend::ALL), alpha-plane scale (0: none), unused ×2
 };
 
 @group(0) @binding(0) var<uniform> u: U;
@@ -172,7 +172,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
 }
 
 // ---- the other blend modes: W3C Compositing and Blending formulas on straight, sRGB-encoded
-// colour, exactly as `filmcraft_render::blend` (no recursion in WGSL, so helpers are split out).
+// colour, exactly as `reelwright_render::blend` (no recursion in WGSL, so helpers are split out).
 
 fn screen(b: f32, s: f32) -> f32 { return b + s - b * s; }
 

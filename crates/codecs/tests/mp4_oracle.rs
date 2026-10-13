@@ -12,11 +12,11 @@ use common::*;
 /// an export does) equals the 48 kHz decode interpolated at the same times.
 #[test]
 fn aac_mp4_resampled_reads_follow_the_edit_list() {
-    let ff = filmcraft_testkit::require_ffmpeg!();
+    let ff = reelwright_testkit::require_ffmpeg!();
     let Some(f) = fixture(&ff, "tone_aac_48k.mp4", &["-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:d=3", "-c:a", "aac", "-b:a", "128k"]) else {
         panic!("could not write the AAC fixture")
     };
-    let src = filmcraft_codecs::open_bytes("tone_aac_48k.mp4", bytes(&f)).unwrap();
+    let src = reelwright_codecs::open_bytes("tone_aac_48k.mp4", bytes(&f)).unwrap();
     let native = src.audio(0, 2 * 48_000, 48_000).unwrap().channels[0].clone();
     let ratio = 48_000.0 / 44_100.0;
     // 30 fps at 44.1 kHz, starting mid-file and off the 48 kHz grid
@@ -42,7 +42,7 @@ fn aac_mp4_resampled_reads_follow_the_edit_list() {
 /// one frame past what plays. The clip must be as long as ffmpeg decodes it: 60 frames, not 61.
 #[test]
 fn bframe_mp4_duration_is_the_decoded_frame_count() {
-    let ff = filmcraft_testkit::require_ffmpeg!();
+    let ff = reelwright_testkit::require_ffmpeg!();
     let args = ["-f", "lavfi", "-i", "testsrc2=size=160x96:rate=30:duration=2", "-c:v", "libx264", "-bf", "2", "-pix_fmt", "yuv420p"];
     let Some(f) = fixture(&ff, "bframes_x264.mp4", &args) else {
         eprintln!("SKIPPED: ffmpeg without libx264");
@@ -50,6 +50,6 @@ fn bframe_mp4_duration_is_the_decoded_frame_count() {
     };
     let n = ffmpeg_frames(&ff, &f, "yuv420p").len() / (160 * 96 * 3 / 2);
     assert_eq!(n, 60);
-    let src = filmcraft_codecs::open_bytes("bframes_x264.mp4", bytes(&f)).unwrap();
-    assert_eq!(src.info().duration, filmcraft_time::FrameRate::FPS_30.tick_of(n as i64));
+    let src = reelwright_codecs::open_bytes("bframes_x264.mp4", bytes(&f)).unwrap();
+    assert_eq!(src.info().duration, reelwright_time::FrameRate::FPS_30.tick_of(n as i64));
 }

@@ -1,7 +1,7 @@
 //! Keyboard-only UI commands from Premiere's default keyboard (M3.12): frame maximize / full
 //! screen, panel cycling, monitor zoom, track heights, Project panel and Text panel keyboard
 //! navigation, play-to-Out variants. The project-changing keyboard commands are engine commands
-//! (`filmcraft_engine::keyboard`); these only change what the UI shows.
+//! (`reelwright_engine::keyboard`); these only change what the UI shows.
 //!
 //! | Id | Premiere command | Default key (scope) |
 //! |---|---|---|
@@ -19,16 +19,16 @@
 //! | `projectPanel.*` | Project panel: List / Icon / Toggle View, Hover Scrub, thumbnail size, Move / Extend Selection | (Project) |
 //! | `textPanel.*` | Text panel transcript: word / line / segment navigation and selection, Delete, Ripple Delete, Show Program Transcript | (Text) |
 //! | `graphics.beginTextEditing` | Begin Text Editing for a Graphic Layer | Cmd+Alt+' |
-//! | `help.filmcraftHelp` | Help (Premiere Help…) | F1 |
+//! | `help.reelwrightHelp` | Help (Premiere Help…) | F1 |
 //! | `app.quit` | Quit | Cmd+Q |
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::dock::PanelKind;
 use crate::menus::UiCommand;
-use filmcraft_engine::project_panel::ViewMode;
+use reelwright_engine::project_panel::ViewMode;
 
 /// Keyboard-only view state.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ macro_rules! uic {
 }
 
 /// Frontend commands added for keyboard parity. Panel-scoped keys are in the shortcut tables
-/// (`FILMCRAFT_PANEL`), so they have no application-wide default here.
+/// (`REELWRIGHT_PANEL`), so they have no application-wide default here.
 pub const COMMANDS: &[UiCommand] = &[
     uic!("window.maximizeFrame", "Maximize or Restore Active Frame", [], Some("Shift+`")),
     uic!("window.maximizeFrameUnderCursor", "Maximize or Restore Frame Under Cursor", [], Some("`")),
@@ -128,19 +128,19 @@ pub const COMMANDS: &[UiCommand] = &[
     uic!("textPanel.rippleDelete", "Ripple Delete", [], None),
     uic!("textPanel.showProgramTranscript", "Show Program Transcript", [], None),
     uic!("graphics.beginTextEditing", "Begin Text Editing for a Graphic Layer", [], Some("Cmd+Alt+'")),
-    uic!("help.filmcraftHelp", "FilmCraft Help…", ["Help"], Some("F1")),
-    uic!("app.quit", "Quit FilmCraft", [], Some("Cmd+Q")),
+    uic!("help.reelwrightHelp", "Reelwright Help…", ["Help"], Some("F1")),
+    uic!("app.quit", "Quit Reelwright", [], Some("Cmd+Q")),
 ];
 
-/// FilmCraft's documentation (Help ▸ FilmCraft Help…, F1).
-pub const HELP_URL: &str = "https://github.com/storytold/filmcraft/tree/main/docs";
+/// Reelwright's documentation (Help ▸ Reelwright Help…, F1).
+pub const HELP_URL: &str = "https://github.com/game7ballJT/reelwright/tree/main/docs";
 
 const HEIGHT_STEP: f32 = 12.0;
 const MIN_TRACK_H: f32 = 24.0;
 const MAX_TRACK_H: f32 = 240.0;
 
 /// Run a keyboard UI command; None when `id` is not one of them.
-pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn route(app: &mut ReelwrightApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if !COMMANDS.iter().any(|c| c.id == id) {
         return None;
     }
@@ -197,7 +197,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
             Ok(json!({"scroll": tv.target_scroll}))
         }
         "graphics.beginTextEditing" => begin_text_editing(app),
-        "help.filmcraftHelp" => {
+        "help.reelwrightHelp" => {
             crate::links::open(ctx, HELP_URL);
             Ok(json!({"url": HELP_URL}))
         }
@@ -220,7 +220,7 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
 
 // ------------------------------------------------------------------ frames and panels
 
-fn toggle_maximize(app: &mut FilmcraftApp, p: PanelKind) -> Value {
+fn toggle_maximize(app: &mut ReelwrightApp, p: PanelKind) -> Value {
     app.ui.keys.maximized = if app.ui.keys.maximized.is_some() { None } else { Some(p) };
     if let Some(p) = app.ui.keys.maximized {
         app.ui.dock.activate(p);
@@ -230,7 +230,7 @@ fn toggle_maximize(app: &mut FilmcraftApp, p: PanelKind) -> Value {
 }
 
 /// The visible panel under the pointer (from last frame's automation rects).
-fn panel_under_pointer(app: &FilmcraftApp, ctx: &egui::Context) -> Option<PanelKind> {
+fn panel_under_pointer(app: &ReelwrightApp, ctx: &egui::Context) -> Option<PanelKind> {
     let pos = ctx.input(|i| i.pointer.latest_pos())?;
     app.auto.query("panel.").into_iter().find_map(|e| {
         let r = egui::Rect::from_min_size(egui::pos2(e.rect[0], e.rect[1]), egui::vec2(e.rect[2], e.rect[3]));
@@ -239,13 +239,13 @@ fn panel_under_pointer(app: &FilmcraftApp, ctx: &egui::Context) -> Option<PanelK
 }
 
 /// Visible panels in layout order (the active tab of each frame).
-fn visible_panels(app: &FilmcraftApp) -> Vec<PanelKind> {
+fn visible_panels(app: &ReelwrightApp) -> Vec<PanelKind> {
     let mut all = Vec::new();
     app.ui.dock.panels(&mut all);
     all.into_iter().filter(|p| app.ui.dock.is_visible(*p) && !p.compact()).collect()
 }
 
-fn cycle_panel(app: &mut FilmcraftApp, next: bool) -> Value {
+fn cycle_panel(app: &mut ReelwrightApp, next: bool) -> Value {
     let v = visible_panels(app);
     if v.is_empty() {
         return Value::Null;
@@ -257,7 +257,7 @@ fn cycle_panel(app: &mut FilmcraftApp, next: bool) -> Value {
 }
 
 /// Ask the focused panel's search field for keyboard focus (`widgets::search_field` takes it).
-fn focus_find_box(app: &mut FilmcraftApp, ctx: &egui::Context) -> Value {
+fn focus_find_box(app: &mut ReelwrightApp, ctx: &egui::Context) -> Value {
     let p = app.ui.focused;
     let rect =
         app.auto.find(&format!("panel.{}", p.id())).map(|e| egui::Rect::from_min_size(egui::pos2(e.rect[0], e.rect[1]), egui::vec2(e.rect[2], e.rect[3])));
@@ -280,25 +280,25 @@ pub fn take_search_focus(ui: &egui::Ui, field: egui::Rect, resp: &egui::Response
 
 // ------------------------------------------------------------------ playback and timeline
 
-fn play_range(app: &mut FilmcraftApp, preroll: bool) -> Result<Value, String> {
+fn play_range(app: &mut ReelwrightApp, preroll: bool) -> Result<Value, String> {
     let seq = app.session.active_sequence().ok_or("no sequence is open")?;
     let fd = seq.settings.frame_rate.frame_duration();
     let end = seq.mark_out.map(|o| o + fd).unwrap_or(seq.duration());
     let start = if preroll {
-        let i = seq.mark_in.unwrap_or(filmcraft_time::Tick::ZERO);
-        let pre = filmcraft_time::Tick::from_seconds_f64(app.session.prefs.playback.preroll_seconds);
-        (i - pre).max(filmcraft_time::Tick::ZERO)
+        let i = seq.mark_in.unwrap_or(reelwright_time::Tick::ZERO);
+        let pre = reelwright_time::Tick::from_seconds_f64(app.session.prefs.playback.preroll_seconds);
+        (i - pre).max(reelwright_time::Tick::ZERO)
     } else {
         app.session.playhead()
     };
-    let stop = if preroll { end + filmcraft_time::Tick::from_seconds_f64(app.session.prefs.playback.postroll_seconds) } else { end };
+    let stop = if preroll { end + reelwright_time::Tick::from_seconds_f64(app.session.prefs.playback.postroll_seconds) } else { end };
     app.session.set_playhead(start);
     app.play(1.0);
     app.playback.stop_at = Some(stop);
     Ok(json!({"from": start.0, "to": stop.0}))
 }
 
-fn all_heights(app: &mut FilmcraftApp, expand: bool) -> Value {
+fn all_heights(app: &mut ReelwrightApp, expand: bool) -> Value {
     let tv = &mut app.ui.timeline;
     let target = if expand { 120.0 } else { MIN_TRACK_H };
     let at_target = tv.video_track_h == target && tv.audio_track_h == target;
@@ -318,7 +318,7 @@ fn all_heights(app: &mut FilmcraftApp, expand: bool) -> Value {
     json!({"videoTrackHeight": tv.video_track_h, "audioTrackHeight": tv.audio_track_h})
 }
 
-fn begin_text_editing(app: &mut FilmcraftApp) -> Result<Value, String> {
+fn begin_text_editing(app: &mut ReelwrightApp) -> Result<Value, String> {
     let list = app.session.execute("graphics.list", json!({})).map_err(|e| e.to_string())?;
     let layers = list["layers"].as_array().cloned().unwrap_or_default();
     let is_text = |l: &Value| l["kind"] == json!("text");
@@ -342,11 +342,11 @@ fn begin_text_editing(app: &mut FilmcraftApp) -> Result<Value, String> {
 // ------------------------------------------------------------------ Project panel
 
 /// Items as the Project panel lists them (its shown tab, in display order).
-fn panel_items(app: &FilmcraftApp) -> Vec<filmcraft_project::ItemId> {
+fn panel_items(app: &ReelwrightApp) -> Vec<reelwright_project::ItemId> {
     crate::panels::project::visible_items(app, crate::panels::project::shown_inst(app))
 }
 
-fn project_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
+fn project_panel(app: &mut ReelwrightApp, op: &str) -> Result<Value, String> {
     match op {
         "viewList" | "viewIcon" | "toggleView" => {
             let inst = crate::panels::project::shown_inst(app);
@@ -425,7 +425,7 @@ fn project_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
             }
         }
     } as usize;
-    let mut new_sel: Vec<filmcraft_project::ItemId> = if extend {
+    let mut new_sel: Vec<reelwright_project::ItemId> = if extend {
         let anchor = sel.first().and_then(|s| items.iter().position(|i| i == s)).unwrap_or(target);
         let (a, b) = (anchor.min(target), anchor.max(target));
         let mut v: Vec<_> = items[a..=b].to_vec();
@@ -445,7 +445,7 @@ fn project_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
 
 // ------------------------------------------------------------------ Text panel (transcript)
 
-fn text_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
+fn text_panel(app: &mut ReelwrightApp, op: &str) -> Result<Value, String> {
     if op == "showProgramTranscript" {
         app.show_panel(PanelKind::Text);
         app.ui.text_tab = "Transcript".into();
@@ -459,15 +459,15 @@ fn text_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
             _ => Ok(Value::Null),
         };
     }
-    let words = filmcraft_engine::transcript::sequence_words(&app.session);
+    let words = reelwright_engine::transcript::sequence_words(&app.session);
     if words.is_empty() {
         return Err("the sequence has no transcript".into());
     }
     let n = words.len();
-    let paras = filmcraft_edit::transcript::paragraphs(&words, filmcraft_time::Tick::from_seconds_f64(1.5));
+    let paras = reelwright_edit::transcript::paragraphs(&words, reelwright_time::Tick::from_seconds_f64(1.5));
     let para_of = |i: usize| paras.iter().position(|p| p.contains(&i)).unwrap_or(0);
     let (anchor, cur) = app.ui.transcript_sel.unwrap_or_else(|| {
-        let i = filmcraft_edit::transcript::word_at(&words, app.session.playhead()).unwrap_or(0);
+        let i = reelwright_edit::transcript::word_at(&words, app.session.playhead()).unwrap_or(0);
         (i, i)
     });
     let line = |i: usize, d: i64| -> usize {

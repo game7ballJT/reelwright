@@ -1,5 +1,5 @@
 //! NVENC as an Export encoder: [`factory`] is registered in front of the software H.264 encoder
-//! (`filmcraft_export::register_encoder`) and takes an export only when Export ▸ Hardware encoding
+//! (`reelwright_export::register_encoder`) and takes an export only when Export ▸ Hardware encoding
 //! is Auto and NVENC can do what the settings ask; otherwise it returns `None` and the software
 //! encoder runs, exactly as before.
 //!
@@ -7,11 +7,11 @@
 //! error naming it; unlike a decoder it cannot be replayed into the software encoder, because the
 //! two write different streams.
 
-use filmcraft_export::{
+use reelwright_export::{
     BitrateMode, EncodedPacket, EncoderFrame, ExportError, ExportSettings, FieldOrder, Format, H264Pass, H264Profile, HardwareEncoding, Result, VideoEncoder,
 };
-use filmcraft_isobmff::{AvcConfig, SampleEntry};
-use filmcraft_time::FrameRate;
+use reelwright_isobmff::{AvcConfig, SampleEntry};
+use reelwright_time::FrameRate;
 
 use super::{Config, NvencH264, Profile};
 
@@ -57,12 +57,12 @@ impl VideoEncoder for NvencEncoder {
         if f.width != self.w || f.height != self.h {
             return Err(ExportError::Encode(format!("NVENC: a {}x{} picture for a {}x{} encoder", f.width, f.height, self.w, self.h)));
         }
-        filmcraft_export::rgba_to_yuv420_8(f.rgba, self.w as usize, self.h as usize, &mut self.y, &mut self.u, &mut self.v);
+        reelwright_export::rgba_to_yuv420_8(f.rgba, self.w as usize, self.h as usize, &mut self.y, &mut self.u, &mut self.v);
         let ps = self
             .enc
             .encode(&self.y, &self.u, &self.v, f.index)
             .map_err(|e| ExportError::Encode(format!("NVENC: {e} (turn Export ▸ Hardware encoding off to use the software encoder)")))?;
-        filmcraft_export::note_hw_encode_frame();
+        reelwright_export::note_hw_encode_frame();
         Ok(self.packets(ps))
     }
 
@@ -128,7 +128,7 @@ pub fn factory(format: Format, w: u32, h: u32, rate: FrameRate, s: &ExportSettin
     }
     let declined = |why: &str| {
         log::info!("hardware encoding declined: {why}");
-        filmcraft_export::note_hw_encode_declined();
+        reelwright_export::note_hw_encode_declined();
         None
     };
     let cfg = match config(format, w, h, rate, s) {
@@ -137,7 +137,7 @@ pub fn factory(format: Format, w: u32, h: u32, rate: FrameRate, s: &ExportSettin
     };
     match NvencH264::new(&cfg) {
         Ok(enc) => {
-            filmcraft_export::note_hw_encode_session();
+            reelwright_export::note_hw_encode_session();
             Some(Ok(Box::new(NvencEncoder { enc, w, h, rate, y: Vec::new(), u: Vec::new(), v: Vec::new() })))
         }
         Err(why) => declined(&why),

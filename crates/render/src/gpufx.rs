@@ -1,4 +1,4 @@
-//! Standard effects with a GPU implementation (`filmcraft_gpu` runs them in WGSL).
+//! Standard effects with a GPU implementation (`reelwright_gpu` runs them in WGSL).
 //!
 //! Each effect here is evaluated in two steps: [`FxOp::eval`] reads the effect's parameters at a
 //! time (keyframes, defaults, `px_scale`, the working image size) into plain numbers, and
@@ -9,9 +9,9 @@
 //! op to the GPU when [`FxOp::gpu_ok`] says the shader covers it (finite numbers, no minifying
 //! resample), otherwise the clip is rendered on the CPU as before.
 
-use filmcraft_color::{hsl_to_rgb, linear_to_srgb, luma709, rgb_to_hsl};
-use filmcraft_geom::Affine;
-use filmcraft_project::EffectInstance;
+use reelwright_color::{hsl_to_rgb, linear_to_srgb, luma709, rgb_to_hsl};
+use reelwright_geom::Affine;
+use reelwright_project::EffectInstance;
 use rayon::prelude::*;
 
 use crate::effects::{FxCtx, b, choice, color, dec, enc, f, gaussian_boxes, point};
@@ -201,7 +201,7 @@ pub const GPU_EFFECTS: &[&str] = &[
 /// `Image::transformed` without the mip path: the destination rectangle it writes and the inverse.
 fn resample(w: usize, h: usize, m: &Affine, opacity: f32) -> Resample {
     let Some(inv) = m.inverse() else { return Resample { inv: None, rect: [0; 4], opacity } };
-    let b = m.bounds(&filmcraft_geom::Rect::new(0.0, 0.0, w as f64, h as f64));
+    let b = m.bounds(&reelwright_geom::Rect::new(0.0, 0.0, w as f64, h as f64));
     let y0 = (b.y.floor().max(0.0) as usize).min(h);
     let y1 = (b.bottom().ceil().max(0.0) as usize).min(h);
     let x0 = (b.x.floor().max(0.0) as usize).min(w);
@@ -702,7 +702,7 @@ impl FxOp {
                     }
                     a = (a * op).clamp(0.0, 1.0);
                     if mask_only {
-                        let g = filmcraft_color::srgb_to_linear(a);
+                        let g = reelwright_color::srgb_to_linear(a);
                         p.copy_from_slice(&[g, g, g, 1.0]);
                     } else {
                         p.copy_from_slice(&[c[0] * a, c[1] * a, c[2] * a, a]);

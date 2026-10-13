@@ -1,6 +1,6 @@
 //! Colour management in the renderer: source colour space resolution (Interpret Footage override
 //! or stream metadata), source → working conversion of decoded frames, and the working → monitor
-//! transform. The maths lives in `filmcraft_color::transform`.
+//! transform. The maths lives in `reelwright_color::transform`.
 //!
 //! A sequence whose pipeline is "plain" (Rec. 709 working space without wide gamut) and media
 //! whose metadata says Rec. 709 / sRGB / linear take the original fast path unchanged.
@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
-use filmcraft_color::{ColorPipeline, ColorSpace, InputTransform, OutputTransform, Range};
-use filmcraft_frame::VideoFrame;
-use filmcraft_project::{ItemId, Project};
+use reelwright_color::{ColorPipeline, ColorSpace, InputTransform, OutputTransform, Range};
+use reelwright_frame::VideoFrame;
+use reelwright_project::{ItemId, Project};
 
 use crate::Image;
 
@@ -60,11 +60,11 @@ pub fn decode(project: &Project, item: ItemId, frame: &VideoFrame, n: usize, pip
     }
     // RGB stills/generators carry full-range code values; YUV carries its own range flag
     let range = match frame.data {
-        filmcraft_frame::PixelData::Rgba8(_) | filmcraft_frame::PixelData::RgbaF32(_) => Range::Full,
+        reelwright_frame::PixelData::Rgba8(_) | reelwright_frame::PixelData::RgbaF32(_) => Range::Full,
         _ => frame.color.range,
     };
     let t = input_transform(cs, range, pipe, source_peak_nits(project, item));
-    let float_src = matches!(frame.data, filmcraft_frame::PixelData::RgbaF32(_));
+    let float_src = matches!(frame.data, reelwright_frame::PixelData::RgbaF32(_));
     // float frames are linear already: only the gamut/tone stages apply to them
     let (w, h, px) = frame.to_linear_f32_decimated_with(n, if float_src { None } else { Some(&t.table) });
     let mut img = Image { w, h, px };
@@ -95,7 +95,7 @@ pub fn display_transform(pipe: &ColorPipeline) -> Arc<OutputTransform> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use filmcraft_color::{ColorInfo, Primaries, Transfer, WorkingSpace};
+    use reelwright_color::{ColorInfo, Primaries, Transfer, WorkingSpace};
 
     fn frame(rgb: [u8; 3], color: ColorInfo) -> VideoFrame {
         let mut f = VideoFrame::rgba8(2, 2, [rgb[0], rgb[1], rgb[2], 255].repeat(4));
@@ -105,16 +105,16 @@ mod tests {
 
     #[test]
     fn mastering_metadata_sets_the_tone_mapping_peak() {
-        use filmcraft_color::HdrMetadata;
-        use filmcraft_media::MediaSource;
-        use filmcraft_project::{ItemKind, Label, MediaClip, MediaRef};
+        use reelwright_color::HdrMetadata;
+        use reelwright_media::MediaSource;
+        use reelwright_project::{ItemKind, Label, MediaClip, MediaRef};
         let pq = ColorInfo { transfer: Transfer::Pq, primaries: Primaries::Bt2020, ..ColorInfo::SRGB_FULL };
         // a PQ grey of ≈ 2000 cd/m² (code 0.83) and one of ≈ 4000 cd/m² (code 0.90)
-        let px = |nits: f32| (filmcraft_color::pq_inverse_eotf(nits / 10_000.0) * 255.0).round() as u8;
+        let px = |nits: f32| (reelwright_color::pq_inverse_eotf(nits / 10_000.0) * 255.0).round() as u8;
         let item_with = |hdr: Option<HdrMetadata>| {
             let mut p = Project::new("t");
-            let g = filmcraft_media::Generator::BlackVideo;
-            let mut info = filmcraft_media::generators::GeneratorSource::new(g.clone(), 2, 2, Default::default(), filmcraft_time::Tick(1)).info().clone();
+            let g = reelwright_media::Generator::BlackVideo;
+            let mut info = reelwright_media::generators::GeneratorSource::new(g.clone(), 2, 2, Default::default(), reelwright_time::Tick(1)).info().clone();
             if let Some(v) = info.video.as_mut() {
                 v.color = pq;
                 v.hdr = hdr;

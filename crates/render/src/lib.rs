@@ -35,11 +35,11 @@ pub mod vfx;
 
 use std::sync::Arc;
 
-use filmcraft_frame::{PixelData, VideoFrame, pool};
-use filmcraft_geom::{Affine, Vec2};
-use filmcraft_media::{FrameRequest, SharedSource};
-use filmcraft_project::{ItemId, ItemKind, ParamValue, Project, Sequence, TrackItem};
-use filmcraft_time::{Tick, TimeDisplay, format_time};
+use reelwright_frame::{PixelData, VideoFrame, pool};
+use reelwright_geom::{Affine, Vec2};
+use reelwright_media::{FrameRequest, SharedSource};
+use reelwright_project::{ItemId, ItemKind, ParamValue, Project, Sequence, TrackItem};
+use reelwright_time::{Tick, TimeDisplay, format_time};
 
 pub use blend::Blend;
 pub use image::Image;
@@ -178,7 +178,7 @@ pub(crate) fn render_seq_tracks(project: &Project, seq: &Sequence, t: Tick, opts
     let tc = format_time(t, seq.settings.frame_rate, seq.settings.drop_frame, TimeDisplay::Timecode, seq.settings.sample_rate as i64);
     for (ti, track) in seq.video_tracks.iter().enumerate() {
         // A cancelled frame job (playback moved on) stops here; its result is discarded.
-        if filmcraft_media::cancel::cancelled() {
+        if reelwright_media::cancel::cancelled() {
             return canvas.into_image();
         }
         if only.is_some_and(|o| o != ti) || (!track.enabled && only.is_none()) {
@@ -301,11 +301,11 @@ fn adjustment_region(seq: &Sequence, item: &TrackItem, project: &Project, mt: Ti
 }
 
 /// Rendered captions of the visible caption tracks at `t` for a `w`×`h` output.
-pub fn caption_overlays(seq: &Sequence, t: Tick, w: usize, h: usize) -> Vec<filmcraft_captions::burn::Overlay> {
+pub fn caption_overlays(seq: &Sequence, t: Tick, w: usize, h: usize) -> Vec<reelwright_captions::burn::Overlay> {
     if seq.caption_tracks.is_empty() {
         return Vec::new();
     }
-    filmcraft_captions::burn::sequence_overlays(seq, t, w, h)
+    reelwright_captions::burn::sequence_overlays(seq, t, w, h)
 }
 
 fn with_opacity(mut img: Image, op: f32) -> Image {
@@ -456,8 +456,8 @@ pub(crate) fn item_layer_ex(
             env: Some(&env),
             working: seq.settings.color.working,
         };
-        for e in item.effects.iter().filter(|e| e.def().is_some_and(|d| !d.intrinsic) && !filmcraft_project::graphic::is_layer(e)) {
-            if filmcraft_media::cancel::cancelled() {
+        for e in item.effects.iter().filter(|e| e.def().is_some_and(|d| !d.intrinsic) && !reelwright_project::graphic::is_layer(e)) {
+            if reelwright_media::cancel::cancelled() {
                 return None;
             }
             mask::apply_effect(&mut layer, e, &cx);
@@ -564,7 +564,7 @@ pub(crate) fn base_layer(
 pub fn render_clip(
     project: &Project,
     seq_id: ItemId,
-    clip: filmcraft_project::ClipId,
+    clip: reelwright_project::ClipId,
     t: Tick,
     opts: RenderOptions,
     sources: &dyn SourceProvider,
@@ -580,8 +580,8 @@ pub fn render_clip(
 /// (or the clip plays at 100 %, is frame-held, or uses Frame Sampling).
 ///
 /// TODO(optical flow): motion-compensated interpolation; Optical Flow renders as Frame Blending.
-pub fn interpolation_blend(item: &TrackItem, t: Tick, src_rate: filmcraft_time::FrameRate) -> Option<(Tick, f32)> {
-    if item.time_interpolation == filmcraft_project::TimeInterpolation::FrameSampling || item.frame_hold.is_some() {
+pub fn interpolation_blend(item: &TrackItem, t: Tick, src_rate: reelwright_time::FrameRate) -> Option<(Tick, f32)> {
+    if item.time_interpolation == reelwright_project::TimeInterpolation::FrameSampling || item.frame_hold.is_some() {
         return None;
     }
     if (item.speed.abs() - 1.0).abs() < 1e-9 {
@@ -622,7 +622,7 @@ pub fn render_item(project: &Project, item: ItemId, t: Tick, scale: f32, sources
             let full_w = src.info().video.as_ref().map_or(f.width, |v| v.width) as f32;
             let n = decimation(f.width as f32, full_w * scale);
             // the Source monitor shows media as SDR Rec. 709 (log/HDR tone mapped per its colour space)
-            Some(colorman::decode(project, item, &f, n, &filmcraft_color::ColorPipeline::REC709))
+            Some(colorman::decode(project, item, &f, n, &reelwright_color::ColorPipeline::REC709))
         }
     }
 }
@@ -637,7 +637,7 @@ impl SourceProvider for SourceMap {
     }
 }
 
-pub fn arc_source(s: impl filmcraft_media::MediaSource + 'static) -> SharedSource {
+pub fn arc_source(s: impl reelwright_media::MediaSource + 'static) -> SharedSource {
     Arc::new(s)
 }
 

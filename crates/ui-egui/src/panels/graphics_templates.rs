@@ -2,7 +2,7 @@
 //! sections of the Edit tab, and the Export As Motion Graphics Template, Install Motion Graphics
 //! Template and Replace Fonts in Projects dialogs (M10.7).
 //!
-//! The library lists the built-in templates (original FilmCraft designs) and the user's
+//! The library lists the built-in templates (original Reelwright designs) and the user's
 //! `.fcgt` templates with thumbnails rendered by the engine, a search field and a category
 //! filter. Click selects, double-click (or Apply) places the template at the playhead, dragging a
 //! card onto the timeline places it there. Everything runs engine commands
@@ -20,15 +20,15 @@
 use std::sync::Arc;
 
 use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
-use filmcraft_engine::graphic_templates::{LibraryEntry, library, thumbnail_cached};
-use filmcraft_project::graphic::{self, layer_display_name, layer_indices};
-use filmcraft_project::gtemplate::ControlKind;
-use filmcraft_project::{ClipId, ParamValue, RollMode, TrackItem};
-use filmcraft_time::Tick;
+use reelwright_engine::graphic_templates::{LibraryEntry, library, thumbnail_cached};
+use reelwright_project::graphic::{self, layer_display_name, layer_indices};
+use reelwright_project::gtemplate::ControlKind;
+use reelwright_project::{ClipId, ParamValue, RollMode, TrackItem};
+use reelwright_time::Tick;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::FilmcraftApp;
+use crate::ReelwrightApp;
 use crate::theme::Tokens;
 
 /// One candidate property in the Export As Motion Graphics Template dialog.
@@ -88,7 +88,7 @@ fn lib_id() -> egui::Id {
 }
 
 /// The template library, re-read at most every two seconds (or after [`invalidate`]).
-fn cached_library(app: &FilmcraftApp, ctx: &egui::Context) -> Vec<LibraryEntry> {
+fn cached_library(app: &ReelwrightApp, ctx: &egui::Context) -> Vec<LibraryEntry> {
     let now = ctx.input(|i| i.time);
     if let Some(Lib(l)) = ctx.data(|d| d.get_temp::<Lib>(lib_id()))
         && now - l.0 < 2.0
@@ -132,7 +132,7 @@ fn tab_button(ui: &mut egui::Ui, r: Rect, label: &str, on: bool, t: &Tokens) -> 
 }
 
 /// The Essential Graphics panel: Browse and Edit tabs.
-pub fn essential_graphics(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
+pub fn essential_graphics(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let tab = match app.ui.gfx_templates.tab.as_str() {
         "browse" => "browse",
@@ -161,7 +161,7 @@ pub fn essential_graphics(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect)
     }
 }
 
-fn browse(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
+fn browse(app: &mut ReelwrightApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let ctx = ui.ctx().clone();
     let lib = cached_library(app, &ctx);
@@ -331,7 +331,7 @@ fn row_label(ui: &mut egui::Ui, label: &str, t: &Tokens) -> egui::Ui {
 /// The template's editable properties (Essential Graphics ▸ Edit for a graphic made from a
 /// template). Returns false when the graphic has no template.
 pub fn template_controls(
-    app: &FilmcraftApp,
+    app: &ReelwrightApp,
     ui: &mut egui::Ui,
     clip: ClipId,
     it: &TrackItem,
@@ -343,7 +343,7 @@ pub fn template_controls(
     let Some(link) = it.graphic.as_ref().and_then(|m| m.template.as_ref()) else { return false };
     ui.label(egui::RichText::new(format!("   Template: {}", link.name)).color(t.text_faint).size(11.0));
     for c in &link.controls {
-        let Some(e) = it.effects.iter().find(|e| graphic::is_layer(e) && filmcraft_project::gtemplate::layer_uid(e) == c.layer) else { continue };
+        let Some(e) = it.effects.iter().find(|e| graphic::is_layer(e) && reelwright_project::gtemplate::layer_uid(e) == c.layer) else { continue };
         let id = format!("gfxTemplates.control.{}", c.id);
         let pv = e.params.get(&c.param).map(|p| p.value_at(mt));
         // multi-line text: the label on its own row, the field full width below it
@@ -427,7 +427,7 @@ pub fn template_controls(
                 let r = egui::ComboBox::from_id_salt(("gfx-tpl-font", clip.0, c.id.as_str())).selected_text(&fam).width(170.0).height(360.0).show_ui(
                     &mut vui,
                     |ui| {
-                        for (f, _) in filmcraft_text::families() {
+                        for (f, _) in reelwright_text::families() {
                             if ui.selectable_label(f == fam, &f).clicked() {
                                 set(json!(f), actions);
                             }
@@ -453,7 +453,7 @@ pub fn template_controls(
 }
 
 /// Responsive Design – Time (intro / outro and roll / crawl), shown with no layer selected.
-pub fn responsive_time(app: &FilmcraftApp, ui: &mut egui::Ui, clip: ClipId, it: &TrackItem, autos: &mut Elems, actions: &mut Vec<(String, Value)>) {
+pub fn responsive_time(app: &ReelwrightApp, ui: &mut egui::Ui, clip: ClipId, it: &TrackItem, autos: &mut Elems, actions: &mut Vec<(String, Value)>) {
     let t = app.tokens;
     let rate = app.session.sequence_rate();
     let m = it.graphic.as_deref().cloned().unwrap_or_default();
@@ -514,7 +514,7 @@ pub fn responsive_time(app: &FilmcraftApp, ui: &mut egui::Ui, clip: ClipId, it: 
 
 /// Responsive Design – Position for the selected layer: Pin To and the pinned edges.
 pub fn responsive_position(
-    app: &FilmcraftApp,
+    app: &ReelwrightApp,
     ui: &mut egui::Ui,
     clip: ClipId,
     it: &TrackItem,
@@ -528,9 +528,9 @@ pub fn responsive_position(
     let pin = it.effects[ei].layer.as_ref().and_then(|x| x.pin.clone());
     let target_name = match pin.as_ref().map(|p| p.to) {
         None => "None".to_string(),
-        Some(filmcraft_project::PinTarget::Frame) => "Video Frame".to_string(),
-        Some(filmcraft_project::PinTarget::Layer(uid)) => (0..idx.len())
-            .find(|&i| filmcraft_project::gtemplate::layer_uid(&it.effects[idx[i]]) == uid)
+        Some(reelwright_project::PinTarget::Frame) => "Video Frame".to_string(),
+        Some(reelwright_project::PinTarget::Layer(uid)) => (0..idx.len())
+            .find(|&i| reelwright_project::gtemplate::layer_uid(&it.effects[idx[i]]) == uid)
             .map(|i| layer_display_name(&it.effects[idx[i]], i))
             .unwrap_or_default(),
     };
@@ -556,9 +556,9 @@ pub fn responsive_position(
     let mut vui = row_label(ui, "Pinned Edges", &t);
     let mut edges = [p.left, p.top, p.right, p.bottom];
     let to = match p.to {
-        filmcraft_project::PinTarget::Frame => json!("frame"),
-        filmcraft_project::PinTarget::Layer(uid) => {
-            json!((0..idx.len()).find(|&i| filmcraft_project::gtemplate::layer_uid(&it.effects[idx[i]]) == uid).unwrap_or(0))
+        reelwright_project::PinTarget::Frame => json!("frame"),
+        reelwright_project::PinTarget::Layer(uid) => {
+            json!((0..idx.len()).find(|&i| reelwright_project::gtemplate::layer_uid(&it.effects[idx[i]]) == uid).unwrap_or(0))
         }
     };
     let mut changed = false;
@@ -582,17 +582,17 @@ pub fn responsive_position(
 // ------------------------------------------------------------------------------------------------
 
 /// Menu / shortcut entry points of this module (None for other ids).
-pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn route(app: &mut ReelwrightApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let empty = params.as_object().is_none_or(|m| m.is_empty());
     match id {
         "graphics.template.install" if params.get("path").is_none() => {
-            let path = app.hooks.pick_open_file.as_mut().and_then(|f| f("FilmCraft Graphics Template", &["fcgt"]))?;
+            let path = app.hooks.pick_open_file.as_mut().and_then(|f| f("Reelwright Graphics Template", &["fcgt"]))?;
             let r = app.session.execute(id, json!({"path": path})).map_err(|e| e.to_string());
             invalidate(ctx);
             Some(r)
         }
         "graphics.template.export" | "file.exportGraphicsTemplate" if empty => {
-            let clip = filmcraft_engine::graphics::target_clip(&app.session, &Value::Null);
+            let clip = reelwright_engine::graphics::target_clip(&app.session, &Value::Null);
             let Some(clip) = clip else { return Some(Err("select a graphic clip".into())) };
             let it = app.session.active_sequence().and_then(|q| q.find_item(clip)).map(|(_, i)| i.clone())?;
             let idx = layer_indices(&it.effects);
@@ -614,9 +614,9 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
             Some(Ok(json!({"dialog": "exportTemplate"})))
         }
         "file.replaceFonts" if empty => {
-            let used = filmcraft_engine::graphic_templates::fonts_used(&app.session);
+            let used = reelwright_engine::graphic_templates::fonts_used(&app.session);
             let from = used.first().map(|f| f.0.clone()).unwrap_or_default();
-            app.ui.gfx_templates.replace = Some(ReplaceDraft { from, to: filmcraft_text::fonts::DEFAULT_FAMILY.into(), error: String::new() });
+            app.ui.gfx_templates.replace = Some(ReplaceDraft { from, to: reelwright_text::fonts::DEFAULT_FAMILY.into(), error: String::new() });
             Some(Ok(json!({"dialog": "replaceFonts"})))
         }
         _ => None,
@@ -624,12 +624,12 @@ pub fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Val
 }
 
 /// Draw this module's dialogs.
-pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut ReelwrightApp, ctx: &egui::Context) {
     export_dialog(app, ctx);
     replace_dialog(app, ctx);
 }
 
-fn export_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
+fn export_dialog(app: &mut ReelwrightApp, ctx: &egui::Context) {
     let Some(mut d) = app.ui.gfx_templates.export.clone() else { return };
     let mut elems: Elems = Vec::new();
     let mut action: Option<bool> = None;
@@ -665,7 +665,7 @@ fn export_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
                     });
                 }
             });
-            ui.label(egui::RichText::new("Saved as a FilmCraft graphics template (.fcgt) in your templates folder.").weak().size(11.0));
+            ui.label(egui::RichText::new("Saved as a Reelwright graphics template (.fcgt) in your templates folder.").weak().size(11.0));
             if !d.error.is_empty() {
                 ui.colored_label(Color32::from_rgb(0xff, 0x80, 0x80), &d.error);
             }
@@ -706,9 +706,9 @@ fn export_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
     }
 }
 
-fn replace_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
+fn replace_dialog(app: &mut ReelwrightApp, ctx: &egui::Context) {
     let Some(mut d) = app.ui.gfx_templates.replace.clone() else { return };
-    let used = filmcraft_engine::graphic_templates::fonts_used(&app.session);
+    let used = reelwright_engine::graphic_templates::fonts_used(&app.session);
     let mut elems: Elems = Vec::new();
     let mut action: Option<bool> = None;
     egui::Window::new("Replace Fonts in Projects").collapsible(false).resizable(false).default_width(440.0).anchor(Align2::CENTER_CENTER, [0.0, 0.0]).show(
@@ -717,7 +717,7 @@ fn replace_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
             ui.label("Fonts used in the project:");
             egui::Grid::new("gfx-fonts-used").striped(true).num_columns(3).show(ui, |ui| {
                 for (f, st, n) in &used {
-                    let missing = filmcraft_text::resolve(f, st).missing;
+                    let missing = reelwright_text::resolve(f, st).missing;
                     ui.label(if missing {
                         egui::RichText::new(format!("{f} (missing)")).color(Color32::from_rgb(0xff, 0xa0, 0x60))
                     } else {
@@ -741,7 +741,7 @@ fn replace_dialog(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 elems.push(("replaceFonts.from".into(), r.response.rect, "Replace".into()));
                 ui.label("with:");
                 let r = egui::ComboBox::from_id_salt("gfx-rf-to").selected_text(&d.to).width(160.0).height(360.0).show_ui(ui, |ui| {
-                    for (f, _) in filmcraft_text::families() {
+                    for (f, _) in reelwright_text::families() {
                         ui.selectable_value(&mut d.to, f.clone(), &f);
                     }
                 });

@@ -2,9 +2,9 @@
 //! relinking one file finds the others by folder remap, fingerprint mismatches are refused,
 //! Make Offline, folder search and undo.
 
-use filmcraft_media::DemoScene;
-use filmcraft_project::ItemId;
-use filmcraft_render::offline::{OfflineReason, slate_rgba8};
+use reelwright_media::DemoScene;
+use reelwright_project::ItemId;
+use reelwright_render::offline::{OfflineReason, slate_rgba8};
 use serde_json::json;
 
 use crate::Session;
@@ -76,7 +76,7 @@ fn moved_media_opens_offline_and_relinks_others_by_folder() {
     assert!(!s.offline.prompt);
     assert_eq!(frame_rgba(&mut s, 3, 1.0).2, online, "relinked media renders as before the move");
     let b_path = s.project.item(items[1]).unwrap().as_media().unwrap().media.clone();
-    assert_eq!(b_path, filmcraft_project::MediaRef::File { path: moved.join("b.mov").to_string_lossy().into_owned() });
+    assert_eq!(b_path, reelwright_project::MediaRef::File { path: moved.join("b.mov").to_string_lossy().replace('\\', "/") });
     // undo brings the old (missing) paths back, and the slate with them
     s.execute("edit.undo", json!({})).unwrap();
     assert!(psnr(&frame_rgba(&mut s, 3, 1.0).2, &slate) > 40.0);

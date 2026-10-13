@@ -2,7 +2,7 @@
 //! need a selection: enablement is checked against the named targets. Without such parameters
 //! (the menus, shortcuts and `engine.commands`) enablement is the selection's, as before.
 
-use filmcraft_project::{ClipId, ItemId, TrackItem};
+use reelwright_project::{ClipId, ItemId, TrackItem};
 use serde_json::json;
 
 use crate::{EngineError, Session};

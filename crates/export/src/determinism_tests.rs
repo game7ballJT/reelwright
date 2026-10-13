@@ -70,8 +70,8 @@ fn h264_slices_follow_the_frame_size_not_the_cores() {
     let (p, seq, m) = project();
     export(&p, seq, &s, &m, &Progress::default()).unwrap();
     let bytes = std::fs::read(&path).unwrap();
-    let file = filmcraft_isobmff::open(bytes.as_slice()).unwrap();
-    let vt = file.track_of_kind(filmcraft_isobmff::TrackKind::Video).unwrap();
+    let file = reelwright_isobmff::open(bytes.as_slice()).unwrap();
+    let vt = file.track_of_kind(reelwright_isobmff::TrackKind::Video).unwrap();
     assert_eq!(file.tracks[vt].samples.len(), 24);
     for i in 0..file.tracks[vt].samples.len() {
         let sample = file.read_sample(bytes.as_slice(), vt, i).unwrap();

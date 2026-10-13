@@ -13,11 +13,11 @@
 
 use std::sync::Arc;
 
-use filmcraft_frame::VideoFrame;
-use filmcraft_geom::Affine;
-use filmcraft_media::FrameRequest;
-use filmcraft_project::{ItemId, ItemKind, Project, Sequence, TrackItem};
-use filmcraft_time::Tick;
+use reelwright_frame::VideoFrame;
+use reelwright_geom::Affine;
+use reelwright_media::FrameRequest;
+use reelwright_project::{ItemId, ItemKind, Project, Sequence, TrackItem};
+use reelwright_time::Tick;
 
 use crate::gpufx::FxOp;
 use crate::{Blend, RenderOptions, SourceProvider, motion_matrix, output_size};
@@ -80,7 +80,7 @@ fn simple_transition(id: &str) -> bool {
 /// The standard effects of a media clip if the GPU can draw it (any blend mode, no opacity masks,
 /// every enabled standard effect unmasked and with a GPU implementation; empty without effects or
 /// with effects off). None: the clip is rendered on the CPU.
-fn gpu_chain<'a>(project: &Project, item: &'a TrackItem, opts: RenderOptions) -> Option<Vec<&'a filmcraft_project::EffectInstance>> {
+fn gpu_chain<'a>(project: &Project, item: &'a TrackItem, opts: RenderOptions) -> Option<Vec<&'a reelwright_project::EffectInstance>> {
     let is_media = project.item(item.item).is_some_and(|p| matches!(p.kind, ItemKind::Media(_) | ItemKind::Subclip { .. }));
     if !is_media || item.has_opacity_masks() {
         return None;
@@ -89,11 +89,11 @@ fn gpu_chain<'a>(project: &Project, item: &'a TrackItem, opts: RenderOptions) ->
         return Some(Vec::new());
     }
     let mut chain = Vec::new();
-    for e in item.effects.iter().filter(|e| e.def().is_some_and(|d| !d.intrinsic) && !filmcraft_project::graphic::is_layer(e)) {
+    for e in item.effects.iter().filter(|e| e.def().is_some_and(|d| !d.intrinsic) && !reelwright_project::graphic::is_layer(e)) {
         if !e.enabled {
             continue;
         }
-        let masked = e.masks.iter().any(|m| m.mode != filmcraft_project::MaskMode::None);
+        let masked = e.masks.iter().any(|m| m.mode != reelwright_project::MaskMode::None);
         if masked || !crate::gpufx::GPU_EFFECTS.contains(&e.effect.as_str()) {
             return None;
         }
@@ -330,7 +330,7 @@ fn push_item(
             // drawn instead of the full picture (a quarter at 1/2, a sixteenth at 1/4 of the
             // upload and sampling). The mean is taken over Y'CbCr codes, not linear light as
             // the shader's supersampling does, so this stays limited to the opt-in draft mode.
-            let n = if filmcraft_media::cancel::draft() { crate::decimation(frame.width as f32, size.0 as f32 * want) } else { 1 };
+            let n = if reelwright_media::cancel::draft() { crate::decimation(frame.width as f32, size.0 as f32 * want) } else { 1 };
             let frame = match frame.box_decimated(n) {
                 Some(small) => Arc::new(small),
                 None => frame,
@@ -342,7 +342,7 @@ fn push_item(
         }
     }
     // CPU-rendered layer (standard effects): drawn by the GPU as a pre-rendered canvas image.
-    let tc = filmcraft_time::format_time(t, seq.settings.frame_rate, seq.settings.drop_frame, filmcraft_time::TimeDisplay::Timecode, 48_000);
+    let tc = reelwright_time::format_time(t, seq.settings.frame_rate, seq.settings.drop_frame, reelwright_time::TimeDisplay::Timecode, 48_000);
     if let Some((img, op2, _)) = crate::item_layer(project, seq, item, t, opts, sources, &tc) {
         out.push(PlanLayer::new(cpu_frame(img), Affine::IDENTITY, op2 * extra_opacity, bl));
     }

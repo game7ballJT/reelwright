@@ -1,5 +1,5 @@
 [package]
-name = "filmcraft-export"
+name = "reelwright-export"
 description = "Export pipeline: parallel render → encode → mux, presets, progress/cancel"
 version.workspace = true
 edition.workspace = true
@@ -10,22 +10,22 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-filmcraft-time = { workspace = true }
-filmcraft-frame = { workspace = true }
-filmcraft-color = { workspace = true }
-filmcraft-media = { workspace = true }
-filmcraft-project = { workspace = true }
-filmcraft-render = { workspace = true }
-filmcraft-audio-dsp = { workspace = true }
-filmcraft-geom = { workspace = true }
-filmcraft-text = { workspace = true }
-filmcraft-isobmff = { workspace = true }
-filmcraft-prores = { workspace = true }
-filmcraft-dnx = { workspace = true }
-filmcraft-apv = { workspace = true }
-filmcraft-mxf = { workspace = true }
-filmcraft-aac = { workspace = true }
-filmcraft-h264enc = { workspace = true }
+reelwright-time = { workspace = true }
+reelwright-frame = { workspace = true }
+reelwright-color = { workspace = true }
+reelwright-media = { workspace = true }
+reelwright-project = { workspace = true }
+reelwright-render = { workspace = true }
+reelwright-audio-dsp = { workspace = true }
+reelwright-geom = { workspace = true }
+reelwright-text = { workspace = true }
+reelwright-isobmff = { workspace = true }
+reelwright-prores = { workspace = true }
+reelwright-dnx = { workspace = true }
+reelwright-apv = { workspace = true }
+reelwright-mxf = { workspace = true }
+reelwright-aac = { workspace = true }
+reelwright-h264enc = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -34,5 +34,5 @@ web-time = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "tiff", "bmp"] }
 
 [dev-dependencies]
-filmcraft-testkit = { workspace = true }
-filmcraft-codecs = { workspace = true }
+reelwright-testkit = { workspace = true }
+reelwright-codecs = { workspace = true }

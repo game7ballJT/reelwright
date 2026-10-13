@@ -2,7 +2,7 @@
 //! moved (search a folder, link, the others follow), Project panel offline / proxy badges, the
 //! monitors' Toggle Proxies button, Create Proxies and Project Manager dialogs.
 //!
-//! Set `FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` to also render the window offscreen with wgpu and write PNGs
+//! Set `REELWRIGHT_UI_SNAPSHOT_DIR=<dir>` to also render the window offscreen with wgpu and write PNGs
 //! there (`media-*.png`).
 
 use std::path::{Path, PathBuf};
@@ -10,18 +10,18 @@ use std::sync::Arc;
 use std::sync::mpsc::{Sender, channel};
 
 use egui_kittest::Harness;
-use filmcraft_engine::Session;
-use filmcraft_engine::project::{ItemKind, Label, MediaClip, MediaRef, Project, SequenceSettings, TrackKind};
-use filmcraft_media::generators::GeneratorSource;
-use filmcraft_media::{DemoScene, Generator, MediaSource};
-use filmcraft_time::{FrameRate, Tick, TimeRange};
-use filmcraft_ui_egui::FilmcraftApp;
-use filmcraft_ui_egui::control::ControlRequest;
+use reelwright_engine::Session;
+use reelwright_engine::project::{ItemKind, Label, MediaClip, MediaRef, Project, SequenceSettings, TrackKind};
+use reelwright_media::generators::GeneratorSource;
+use reelwright_media::{DemoScene, Generator, MediaSource};
+use reelwright_time::{FrameRate, Tick, TimeRange};
+use reelwright_ui_egui::ReelwrightApp;
+use reelwright_ui_egui::control::ControlRequest;
 use serde_json::{Value, json};
 
 fn tmp_dir(name: &str) -> PathBuf {
     let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
-    let d = std::env::temp_dir().join(format!("filmcraft-ui-{name}-{}-{nanos}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("reelwright-ui-{name}-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -47,18 +47,18 @@ fn make_movie(path: &Path, scene: DemoScene, w: u32, h: u32, frames: i64) {
     let seq = p.new_sequence("s", SequenceSettings { width: w, height: h, frame_rate: rate, ..Default::default() }, 1, 0, None);
     let mut v = p.make_track_item(item, TrackKind::Video, Tick::ZERO, TimeRange::new(Tick::ZERO, dur), rate).unwrap();
     for e in &mut v.effects {
-        filmcraft_engine::project::resolve_auto_points(e, (w, h), (w, h));
+        reelwright_engine::project::resolve_auto_points(e, (w, h), (w, h));
     }
     p.sequence_mut(seq).unwrap().video_tracks[0].items.push(v);
-    let settings = filmcraft_engine::export::ExportSettings {
-        format: filmcraft_engine::export::Format::ProRes,
+    let settings = reelwright_engine::export::ExportSettings {
+        format: reelwright_engine::export::Format::ProRes,
         path: path.to_string_lossy().into_owned(),
         include_audio: false,
         ..Default::default()
     };
-    let shared: filmcraft_media::SharedSource = Arc::new(src);
+    let shared: reelwright_media::SharedSource = Arc::new(src);
     let provider = move |id| (id == item).then(|| shared.clone());
-    filmcraft_engine::export::export(&Arc::new(p), seq, &settings, &provider, &Default::default()).unwrap();
+    reelwright_engine::export::export(&Arc::new(p), seq, &settings, &provider, &Default::default()).unwrap();
 }
 
 /// `<root>/p.fcproj` with a sequence of `<root>/Media/{Harbour,Night}.mov`; the media folder is
@@ -77,11 +77,11 @@ fn moved_project(root: &Path) -> String {
     let seq = p.new_sequence("Harbour Cut", SequenceSettings { width: 640, height: 360, frame_rate: rate, ..Default::default() }, 1, 1, None);
     let mut at = Tick::ZERO;
     for it in items {
-        let it = filmcraft_engine::project::ItemId(it);
+        let it = reelwright_engine::project::ItemId(it);
         let d = rate.tick_of(24);
         let mut v = p.make_track_item(it, TrackKind::Video, at, TimeRange::new(Tick::ZERO, d), rate).unwrap();
         for e in &mut v.effects {
-            filmcraft_engine::project::resolve_auto_points(e, (640, 360), (640, 360));
+            reelwright_engine::project::resolve_auto_points(e, (640, 360), (640, 360));
         }
         p.sequence_mut(seq).unwrap().video_tracks[0].items.push(v);
         at += d;
@@ -89,13 +89,14 @@ fn moved_project(root: &Path) -> String {
     s.project = Arc::new(p);
     let path = root.join("p.fcproj").to_string_lossy().into_owned();
     s.execute("file.save", json!({"path": path})).unwrap();
+    drop(s); // Windows will not move a folder whose files the session still has open
     std::fs::create_dir_all(root.join("Moved")).unwrap();
     std::fs::rename(&media, root.join("Moved").join("Media")).unwrap();
     path
 }
 
 struct Driver {
-    harness: Harness<'static, FilmcraftApp>,
+    harness: Harness<'static, ReelwrightApp>,
     tx: Sender<ControlRequest>,
     snapshots: Option<PathBuf>,
 }
@@ -103,8 +104,8 @@ struct Driver {
 impl Driver {
     fn new(session: Session) -> Self {
         let (tx, rx) = channel();
-        let app = FilmcraftApp::new(session).with_control(rx);
-        let snapshots = std::env::var_os("FILMCRAFT_UI_SNAPSHOT_DIR").map(PathBuf::from);
+        let app = ReelwrightApp::new(session).with_control(rx);
+        let snapshots = std::env::var_os("REELWRIGHT_UI_SNAPSHOT_DIR").map(PathBuf::from);
         let mut b = Harness::builder().with_size(egui::vec2(1600.0, 980.0)).with_max_steps(10_000);
         if snapshots.is_some() {
             b = b.wgpu();
@@ -157,7 +158,7 @@ impl Driver {
         v.as_array().unwrap().iter().filter_map(|e| e["id"].as_str().map(str::to_string)).collect()
     }
 
-    fn app(&mut self) -> &mut FilmcraftApp {
+    fn app(&mut self) -> &mut ReelwrightApp {
         self.harness.state_mut()
     }
 

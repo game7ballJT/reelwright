@@ -5,9 +5,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use egui_kittest::Harness;
-use filmcraft_engine::Session;
-use filmcraft_time::Tick;
-use filmcraft_ui_egui::{AudioOut, FilmcraftApp};
+use reelwright_engine::Session;
+use reelwright_time::Tick;
+use reelwright_ui_egui::{AudioOut, ReelwrightApp};
 use serde_json::json;
 
 /// An output whose stream opens, then plays `per_poll` frames each time the clock is read
@@ -40,7 +40,7 @@ fn play_with(per_poll: u64, steps: usize) -> (f64, bool) {
     let mut s = Session::default();
     s.execute("file.openDemoProject", json!({})).unwrap();
     s.set_playhead(Tick::ZERO);
-    let mut app = FilmcraftApp::new(s);
+    let mut app = ReelwrightApp::new(s);
     app.audio = Some(Box::new(FakeOut { played: Arc::new(AtomicU64::new(0)), per_poll, started: false }));
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_step_dt(0.25).build_eframe(move |_cc| app);
     h.step();

@@ -3,10 +3,10 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use filmcraft_engine::Session;
-use filmcraft_project::{ItemId, Project, SequenceSettings, TrackKind};
-use filmcraft_time::{FrameRate, Tick, TimeRange};
-use filmcraft_ui_egui::frames::{FrameServer, process_cpu_time};
+use reelwright_engine::Session;
+use reelwright_project::{ItemId, Project, SequenceSettings, TrackKind};
+use reelwright_time::{FrameRate, Tick, TimeRange};
+use reelwright_ui_egui::frames::{FrameServer, process_cpu_time};
 use serde_json::{Value, json};
 
 use crate::Opts;
@@ -53,9 +53,9 @@ pub fn decode(o: &Opts) -> Vec<Value> {
         let mut first = Vec::new();
         let mut frames = 0;
         let mut rate = FrameRate::FPS_23_976;
-        let hw0 = filmcraft_codecs::hw::hw_stats();
+        let hw0 = reelwright_codecs::hw::hw_stats();
         for _ in 0..o.repeat {
-            let src = match filmcraft_codecs::open_bytes(name, bytes.clone()) {
+            let src = match reelwright_codecs::open_bytes(name, bytes.clone()) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("decode {name}: {e}");
@@ -68,7 +68,7 @@ pub fn decode(o: &Opts) -> Vec<Value> {
             frames = n;
             let (t0, c0) = (Instant::now(), cpu_now());
             for f in 0..n {
-                if let Err(e) = src.video_frame(filmcraft_media::FrameRequest::full(rate.tick_of(f))) {
+                if let Err(e) = src.video_frame(reelwright_media::FrameRequest::full(rate.tick_of(f))) {
                     eprintln!("decode {name} frame {f}: {e}");
                     break;
                 }
@@ -84,7 +84,7 @@ pub fn decode(o: &Opts) -> Vec<Value> {
             continue;
         }
         let best = fps.iter().cloned().fold(0.0, f64::max);
-        let hw = filmcraft_codecs::hw::hw_stats();
+        let hw = reelwright_codecs::hw::hw_stats();
         let row = json!({
             "fixture": name, "codec": codec, "size": size, "frames": frames,
             "fps": best, "fps_min": fps.iter().cloned().fold(f64::MAX, f64::min), "fps_runs": fps,
@@ -125,15 +125,15 @@ pub fn seek(o: &Opts) -> Vec<Value> {
             rng ^= rng >> 7;
             rng ^= rng << 17;
             for (m, (_, margin)) in modes.iter().enumerate() {
-                let src = filmcraft_codecs::open_bytes(name, bytes.clone()).expect("open");
+                let src = reelwright_codecs::open_bytes(name, bytes.clone()).expect("open");
                 let rate = src.info().frame_rate();
                 let n = rate.frame_at(src.info().duration).max(1);
                 let t = rate.tick_of((rng % n as u64) as i64);
-                let (g0, t0, c0) = (filmcraft_codecs::gop_stats(), Instant::now(), cpu_now());
-                filmcraft_media::cancel::with_catch_up(*margin, || src.video_frame(filmcraft_media::FrameRequest::full(t))).expect("frame");
+                let (g0, t0, c0) = (reelwright_codecs::gop_stats(), Instant::now(), cpu_now());
+                reelwright_media::cancel::with_catch_up(*margin, || src.video_frame(reelwright_media::FrameRequest::full(t))).expect("frame");
                 wall[m].push(ms(t0.elapsed()));
                 cpu[m].push(ms(cpu_now() - c0));
-                let g = filmcraft_codecs::gop_stats() - g0;
+                let g = reelwright_codecs::gop_stats() - g0;
                 dec[m] += g.decoded;
                 skip[m] += g.skipped;
             }
@@ -197,7 +197,7 @@ pub fn playback(o: &Opts) -> Vec<Value> {
             bench.draft = draft;
             let mut display = Display::new(o.gpu);
             let path = if display.gpu_available() { "gpu" } else { "cpu" };
-            let hw0 = filmcraft_codecs::hw::hw_stats();
+            let hw0 = reelwright_codecs::hw::hw_stats();
             let r = bench.play(&s, seq, &mut display, scale, Tick::ZERO, &format!("{scenario} {res} #{}", rep + 1));
             let mut v = playback::to_json(&r, scenario, res, path);
             let frames = (r.shown + r.dropped).max(1) as f64;
@@ -208,7 +208,7 @@ pub fn playback(o: &Opts) -> Vec<Value> {
             v["skipped"] = json!(r.gop.skipped);
             v["draft_frames"] = json!(r.gop.draft);
             // OS hardware decoder activity during the run (zero with --hw off)
-            let hw = filmcraft_codecs::hw::hw_stats();
+            let hw = reelwright_codecs::hw::hw_stats();
             v["hw_frames"] = json!(hw.frames - hw0.frames);
             v["hw_sessions"] = json!(hw.sessions - hw0.sessions);
             v["hw_fallbacks"] = json!(hw.fallbacks - hw0.fallbacks);
@@ -282,7 +282,7 @@ pub fn big_sequence(s: &mut Session, item: ItemId, name: &str, seed: u64) -> (It
                     p.make_track_item(item, kind, rate.tick_of(at), TimeRange::new(rate.tick_of(src_in), rate.tick_of(len)), rate).expect("track item");
                 // "auto" (NaN) Motion points resolve against the frame, as the edit commands do
                 for e in &mut it.effects {
-                    filmcraft_project::resolve_auto_points(e, (1920, 1080), (640, 360));
+                    reelwright_project::resolve_auto_points(e, (1920, 1080), (640, 360));
                 }
                 items.push(it);
                 at += len + (next() % 12) as i64;
@@ -306,8 +306,8 @@ pub fn big_sequence(s: &mut Session, item: ItemId, name: &str, seed: u64) -> (It
 // ------------------------------------------------------------------------------------ timeline UI
 
 struct Ui {
-    harness: egui_kittest::Harness<'static, filmcraft_ui_egui::FilmcraftApp>,
-    tx: std::sync::mpsc::Sender<filmcraft_ui_egui::control::ControlRequest>,
+    harness: egui_kittest::Harness<'static, reelwright_ui_egui::ReelwrightApp>,
+    tx: std::sync::mpsc::Sender<reelwright_ui_egui::control::ControlRequest>,
 }
 
 impl Ui {
@@ -320,7 +320,7 @@ impl Ui {
     }
 
     fn call(&mut self, method: &str, params: Value) -> Value {
-        let (req, reply) = filmcraft_ui_egui::control::ControlRequest::new(method, params.clone());
+        let (req, reply) = reelwright_ui_egui::control::ControlRequest::new(method, params.clone());
         self.tx.send(req).expect("control");
         for _ in 0..600 {
             self.frame();
@@ -348,7 +348,7 @@ pub fn timeline(o: &Opts) -> Vec<Value> {
         let item = playback::import(&mut s, &path);
         let (_, clips) = big_sequence(&mut s, item, "Timeline 1000", 7);
         let (tx, rx) = std::sync::mpsc::channel();
-        let app = filmcraft_ui_egui::FilmcraftApp::new(s).with_control(rx);
+        let app = reelwright_ui_egui::ReelwrightApp::new(s).with_control(rx);
         let mut b = egui_kittest::Harness::builder().with_size(egui::vec2(1920.0, 1080.0)).with_max_steps(100_000);
         if gpu {
             b = b.wgpu();
@@ -434,7 +434,7 @@ pub fn export(o: &Opts) -> Vec<Value> {
         return Vec::new();
     };
     let secs = if o.quick { 3.0 } else { 8.0 };
-    let dir = std::env::temp_dir().join(format!("filmcraft-bench-export-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("reelwright-bench-export-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("tmp dir");
     let mut rows = Vec::new();
     for (format, label, ext) in [("h264", "H.264 + AAC (MP4)", "mp4"), ("prores", "ProRes 422 (MOV)", "mov")].into_iter().filter(|f| o.wants(f.0)) {
@@ -442,7 +442,7 @@ pub fn export(o: &Opts) -> Vec<Value> {
         let mut cpu = Vec::new();
         let mut bytes = 0u64;
         let mut frames = 0i64;
-        let hw0 = filmcraft_engine::export::hw_encode_stats();
+        let hw0 = reelwright_engine::export::hw_encode_stats();
         for _ in 0..o.repeat {
             let mut s = Session::default();
             let a = playback::import(&mut s, &path);
@@ -486,7 +486,7 @@ pub fn export(o: &Opts) -> Vec<Value> {
             "realtime": frames as f64 / best / FrameRate::FPS_23_976.as_f64(), "cpu_ms_per_frame": median(&cpu),
             "mbytes": bytes as f64 / 1e6, "runs_s": runs, "load": load_avg(),
             // pictures encoded by a hardware encoder during this row (zero with --hw off or where there is none)
-            "hw_frames": filmcraft_engine::export::hw_encode_stats().frames.saturating_sub(hw0.frames),
+            "hw_frames": reelwright_engine::export::hw_encode_stats().frames.saturating_sub(hw0.frames),
         }));
     }
     let _ = std::fs::remove_dir_all(&dir);
@@ -507,7 +507,7 @@ pub fn project(o: &Opts) -> Vec<Value> {
     for k in 0..5 {
         clips += big_sequence(&mut s, item, &format!("Sequence {}", k + 1), 11 + k as u64).1;
     }
-    let dir = std::env::temp_dir().join(format!("filmcraft-bench-project-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("reelwright-bench-project-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("tmp dir");
     let file = dir.join("big.fcproj");
     let n = o.repeat.max(3);

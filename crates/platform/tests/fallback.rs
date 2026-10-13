@@ -6,9 +6,9 @@
 mod common;
 
 use common::*;
-use filmcraft_codecs::hw::NalStreamInfo;
-use filmcraft_codecs::{DecodedFrame, Result, VideoDecoder};
-use filmcraft_platform::HybridDecoder;
+use reelwright_codecs::hw::NalStreamInfo;
+use reelwright_codecs::{DecodedFrame, Result, VideoDecoder};
+use reelwright_platform::HybridDecoder;
 
 /// Decodes like the software decoder until `fail_after` samples were fed, then fails every call
 /// (its pending pictures stay retrievable through `flush`, as with a real session).
@@ -22,7 +22,7 @@ impl VideoDecoder for Failing {
     fn decode(&mut self, sample: &[u8], pts: i64) -> Result<Vec<DecodedFrame>> {
         self.fed += 1;
         if self.fed > self.fail_after {
-            return Err(filmcraft_codecs::CodecError::Decode("session invalidated (test)".into()));
+            return Err(reelwright_codecs::CodecError::Decode("session invalidated (test)".into()));
         }
         self.inner.decode(sample, pts)
     }
@@ -39,17 +39,17 @@ impl VideoDecoder for Failing {
 
 fn hybrid(s: &Stream, fail_after: usize) -> HybridDecoder {
     let info = NalStreamInfo::from_entry(&s.entry).unwrap().unwrap();
-    let inner = filmcraft_codecs::software_video_decoder(&s.entry).unwrap();
+    let inner = reelwright_codecs::software_video_decoder(&s.entry).unwrap();
     HybridDecoder::new(Box::new(Failing { inner, fail_after, fed: 0 }), s.entry.clone(), info)
 }
 
 #[test]
 fn failures_anywhere_continue_with_the_software_output() {
-    let ff = filmcraft_testkit::require_ffmpeg!();
+    let ff = reelwright_testkit::require_ffmpeg!();
     for (name, _) in FIXTURES {
         let Some(path) = named(&ff, name) else { continue };
         let s = read_stream(&path);
-        let reference = decode_all(filmcraft_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &s.samples);
+        let reference = decode_all(reelwright_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &s.samples);
         let syncs: Vec<usize> = (0..s.samples.len()).filter(|&i| s.sync[i]).collect();
         let mut points: Vec<usize> = vec![0, 1, 3, 7, s.samples.len() - 1, s.samples.len()];
         for &k in &syncs {
@@ -65,7 +65,7 @@ fn failures_anywhere_continue_with_the_software_output() {
         if let Some(&k) = syncs.get(1) {
             let tail = &s.samples[k..];
             let expect = {
-                let mut sw = filmcraft_codecs::software_video_decoder(&s.entry).unwrap();
+                let mut sw = reelwright_codecs::software_video_decoder(&s.entry).unwrap();
                 decode_all(sw.as_mut(), tail)
             };
             let mut d = hybrid(&s, k + 4);
@@ -78,7 +78,7 @@ fn failures_anywhere_continue_with_the_software_output() {
 
 #[test]
 fn changed_in_band_parameter_sets_switch_to_software() {
-    let ff = filmcraft_testkit::require_ffmpeg!();
+    let ff = reelwright_testkit::require_ffmpeg!();
     let Some(path) = named(&ff, "h264_high.mp4") else { return };
     let s = read_stream(&path);
     let info = NalStreamInfo::from_entry(&s.entry).unwrap().unwrap();
@@ -94,7 +94,7 @@ fn changed_in_band_parameter_sets_switch_to_software() {
     let mut d = hybrid(&s, usize::MAX);
     let out = decode_all(&mut d, &same);
     assert!(d.is_hardware());
-    assert_same("repeated SPS", &out, &decode_all(filmcraft_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &same));
+    assert_same("repeated SPS", &out, &decode_all(reelwright_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &same));
     // a different SPS (same values, trailing zero byte) at the second sync sample: software
     let mut changed_sps = sps.clone();
     changed_sps.push(0);
@@ -103,5 +103,5 @@ fn changed_in_band_parameter_sets_switch_to_software() {
     let mut d = hybrid(&s, usize::MAX);
     let out = decode_all(&mut d, &changed);
     assert!(!d.is_hardware(), "changed SPS: software");
-    assert_same("changed SPS", &out, &decode_all(filmcraft_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &changed));
+    assert_same("changed SPS", &out, &decode_all(reelwright_codecs::software_video_decoder(&s.entry).unwrap().as_mut(), &changed));
 }

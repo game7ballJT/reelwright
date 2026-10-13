@@ -4,9 +4,9 @@ mod support;
 
 use std::collections::HashSet;
 
-use filmcraft_interchange::{ExportOptions, Format, detect, export, import, merge_into, rebase_source_timecode};
-use filmcraft_project::{ItemKind, Project, TrackKind, TransitionAlign};
-use filmcraft_time::FrameRate;
+use reelwright_interchange::{ExportOptions, Format, detect, export, import, merge_into, rebase_source_timecode};
+use reelwright_project::{ItemKind, Project, TrackKind, TransitionAlign};
+use reelwright_time::FrameRate;
 use support::*;
 
 #[test]

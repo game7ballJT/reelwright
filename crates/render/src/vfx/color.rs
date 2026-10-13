@@ -1,8 +1,8 @@
 //! Colour, keying and matte effects.
 
-use filmcraft_color::{Matrix, hsl_to_rgb, rgb_to_hsl, rgb_to_ycbcr};
-use filmcraft_project::EffectInstance;
-use filmcraft_project::effect::LIGHT_IDS;
+use reelwright_color::{Matrix, hsl_to_rgb, rgb_to_hsl, rgb_to_ycbcr};
+use reelwright_project::EffectInstance;
+use reelwright_project::effect::LIGHT_IDS;
 use rayon::prelude::*;
 
 use super::*;
@@ -132,11 +132,11 @@ pub fn video_limiter(img: &mut Image, e: &EffectInstance, cx: &FxCtx) {
 /// sRGB encoding that keeps values above 1 (super-whites) instead of clamping them.
 #[inline]
 fn linear_to_enc(v: f32) -> f32 {
-    if v <= 1.0 { filmcraft_color::linear_to_srgb(v.max(0.0)) } else { 1.0 + (v - 1.0) / 2.4 }
+    if v <= 1.0 { reelwright_color::linear_to_srgb(v.max(0.0)) } else { 1.0 + (v - 1.0) / 2.4 }
 }
 #[inline]
 fn enc_to_linear(v: f32) -> f32 {
-    if v <= 1.0 { filmcraft_color::srgb_to_linear(v.max(0.0)) } else { 1.0 + (v - 1.0) * 2.4 }
+    if v <= 1.0 { reelwright_color::srgb_to_linear(v.max(0.0)) } else { 1.0 + (v - 1.0) * 2.4 }
 }
 fn dec_unclamped(c: [f32; 3]) -> [f32; 3] {
     c.map(enc_to_linear)
@@ -352,7 +352,7 @@ pub fn ultra_key(img: &mut Image, e: &EffectInstance, cx: &FxCtx) {
         let l = dec(v);
         match output {
             1 => {
-                let g = filmcraft_color::srgb_to_linear(a);
+                let g = reelwright_color::srgb_to_linear(a);
                 p.copy_from_slice(&[g * src_a, g * src_a, g * src_a, src_a]);
             }
             2 => p.copy_from_slice(&[l[0] * src_a, l[1] * src_a, l[2] * src_a, src_a]),
@@ -383,7 +383,7 @@ pub(crate) fn apply_matte(img: &mut Image, matte: &Image, m: &Affine, use_luma: 
         for x in 0..w {
             let o = m.apply(Vec2::new(x as f64 + 0.5, y as f64 + 0.5));
             let s = matte.sample_bilinear(o.x as f32, o.y as f32);
-            let mut v = if use_luma { filmcraft_color::linear_to_srgb(luma([s[0], s[1], s[2]]).clamp(0.0, 1.0)) } else { s[3] };
+            let mut v = if use_luma { reelwright_color::linear_to_srgb(luma([s[0], s[1], s[2]]).clamp(0.0, 1.0)) } else { s[3] };
             if reverse {
                 v = 1.0 - v;
             }

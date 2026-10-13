@@ -1,8 +1,8 @@
 //! Old project files keep opening: hand-made fixtures of every past schema are upgraded on load.
 
-use filmcraft_format::{FormatError, SCHEMA_VERSION, decode, encode};
-use filmcraft_project::{ClipId, ItemId, ItemKind, Project};
-use filmcraft_time::Tick;
+use reelwright_format::{FormatError, SCHEMA_VERSION, decode, encode};
+use reelwright_project::{ClipId, ItemId, ItemKind, Project};
+use reelwright_time::Tick;
 
 fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)).unwrap()
@@ -90,7 +90,7 @@ fn future_schema_is_refused_with_a_clear_error() {
     v["version"] = 99.into();
     let e = decode(&serde_json::to_vec(&v).unwrap()).unwrap_err();
     assert!(matches!(e, FormatError::TooNew { found: 99, .. }), "{e}");
-    assert!(e.to_string().contains("Update FilmCraft"));
+    assert!(e.to_string().contains("Update Reelwright"));
 }
 
 /// Build a project with `n` clips (half video, half linked audio) on 4+4 tracks.
@@ -110,10 +110,10 @@ pub fn big_project(n: usize) -> Project {
     let mut vt = seq.video_tracks[0].clone();
     let mut at = seq.audio_tracks[0].clone();
     for k in 1..4 {
-        vt.id = filmcraft_project::TrackId(500 + k);
+        vt.id = reelwright_project::TrackId(500 + k);
         vt.name = format!("Video {}", k + 1);
         seq.video_tracks.push(vt.clone());
-        at.id = filmcraft_project::TrackId(600 + k);
+        at.id = reelwright_project::TrackId(600 + k);
         at.name = format!("Audio {}", k + 1);
         seq.audio_tracks.push(at.clone());
     }
@@ -162,9 +162,9 @@ fn large_project_roundtrip_and_timing() {
     let decode_ms = t0.elapsed().as_secs_f64() * 1000.0;
     assert_eq!(back.project, p);
     let t0 = std::time::Instant::now();
-    let dir = std::env::temp_dir().join(format!("filmcraft-big-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("reelwright-big-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    filmcraft_format::atomic_write(&dir.join("big.fcproj"), &compact).unwrap();
+    reelwright_format::atomic_write(&dir.join("big.fcproj"), &compact).unwrap();
     let write_ms = t0.elapsed().as_secs_f64() * 1000.0;
     std::fs::remove_dir_all(&dir).unwrap();
     println!(
@@ -181,8 +181,8 @@ fn v8_loads_without_transcripts_and_v9_roundtrips_them() {
     assert!(l.migrated());
     assert!(l.project.transcripts.is_empty());
     let mut p = l.project;
-    let mut t = filmcraft_project::Transcript { language: "en".into(), source: "manual".into(), ..Default::default() };
-    t.words.push(filmcraft_project::Word::new("Hello", Tick(0), Tick(1000)));
+    let mut t = reelwright_project::Transcript { language: "en".into(), source: "manual".into(), ..Default::default() };
+    t.words.push(reelwright_project::Word::new("Hello", Tick(0), Tick(1000)));
     t.words[0].speaker = Some(0);
     t.normalize();
     p.transcripts.insert(ItemId(7), std::sync::Arc::new(t));
@@ -202,7 +202,7 @@ fn v11_minimal_loads_without_graphics_design_data() {
     let p = &l.project;
     assert_eq!(p.name, "Before Graphics Templates");
     assert!(p.source_graphics.is_empty());
-    assert!(p.root.find_bin(filmcraft_project::BinId(1)).is_some());
+    assert!(p.root.find_bin(reelwright_project::BinId(1)).is_some());
     let again = decode(&encode(p, true)).unwrap();
     assert_eq!(again.schema_version, SCHEMA_VERSION);
     const { assert!(SCHEMA_VERSION >= 12) };
@@ -222,7 +222,7 @@ fn v10_minimal_loads_with_m3_11_defaults() {
     assert_eq!((p.settings.title_safe, p.settings.action_safe), ((20.0, 20.0), (10.0, 10.0)));
     assert_eq!(p.settings.capture_format, "DV");
     assert_eq!(p.settings.scratch, Default::default());
-    assert!(p.root.find_bin(filmcraft_project::BinId(1)).is_some());
+    assert!(p.root.find_bin(reelwright_project::BinId(1)).is_some());
     let again = decode(&encode(p, true)).unwrap();
     assert_eq!(again.schema_version, SCHEMA_VERSION);
     assert_eq!(&again.project, p);

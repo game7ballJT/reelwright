@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reelwright MSI (WiX Toolset v5: `dotnet tool install -g wix`). Built by package.ps1:
+
+    wix build reelwright.wxs -arch x64 -d Version=1.2.3 -d BinDir=... -d IconPath=... -o out.msi
+
+  Per-machine install into Program Files and a Start Menu shortcut. No file associations.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="Reelwright"
+      Manufacturer="Jon McGee"
+      Version="$(var.Version)"
+      UpgradeCode="31E6FB14-9DBC-41DD-B24B-26B71FB31B62"
+      Scope="perMachine"
+      Compressed="yes"
+      Language="1033">
+    <SummaryInformation Description="Reelwright video editor" Manufacturer="Jon McGee" />
+    <!-- Same-version upgrades let successive pre-releases of one X.Y.Z replace each other
+         (MSI versions are numeric, so 1.2.3-rc.1 and 1.2.3-rc.2 are both 1.2.3). -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of Reelwright is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="ReelwrightIcon.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="ReelwrightIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.jonmcgee.online/apps/reelwright/" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://www.jonmcgee.online/apps/reelwright/" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/game7ballJT/reelwright/issues" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Reelwright" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Reelwright" Level="1">
+      <ComponentGroupRef Id="ReelwrightFiles" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="ReelwrightFiles" Directory="INSTALLFOLDER">
+      <Component Id="ReelwrightApp" Guid="15933017-925B-4963-8992-52000EB26AAA">
+        <File Id="ReelwrightExe" Source="$(var.BinDir)\reelwright.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Reelwright"
+              Description="Reelwright video editor" WorkingDirectory="INSTALLFOLDER" Advertise="yes"
+              Icon="ReelwrightIcon.ico" IconIndex="0" />
+        </File>
+
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\reelwright.exe" Value="[#ReelwrightExe]" Type="string" />
+      </Component>
+
+      <Component Id="ReelwrightCli">
+        <File Id="ReelwrightCliExe" Source="$(var.BinDir)\reelwright-cli.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

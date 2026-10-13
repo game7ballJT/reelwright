@@ -9,7 +9,7 @@
 //! then encodes for real with the first pass's statistics.
 //!
 //! When a source's bytes are not available yet (asynchronous web reads mark
-//! [`filmcraft_media::pending`]), the batch is rendered again on the next call: nothing is encoded
+//! [`reelwright_media::pending`]), the batch is rendered again on the next call: nothing is encoded
 //! from frames or audio with missing media.
 //!
 //! The file does not depend on how many frames a step renders (one per core natively, one on the
@@ -19,10 +19,10 @@
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use filmcraft_isobmff::{Brand, Mp4Writer, PcmConfig, SampleEntry, TrackConfig, WriteSample, WriterOptions};
-use filmcraft_project::{ItemId, Project};
-use filmcraft_render::SourceProvider;
-use filmcraft_time::FrameRate;
+use reelwright_isobmff::{Brand, Mp4Writer, PcmConfig, SampleEntry, TrackConfig, WriteSample, WriterOptions};
+use reelwright_project::{ItemId, Project};
+use reelwright_render::SourceProvider;
+use reelwright_time::FrameRate;
 use rayon::prelude::*;
 
 use crate::audio_out::AudioOut;
@@ -107,7 +107,7 @@ impl Exporter {
         let hdr_out = pipe.working.is_hdr() && !settings.sdr && matches!(settings.video_format(), Format::H264 | Format::ProRes | Format::DnxHr | Format::Apv);
         let mut settings = settings.clone();
         settings.signal = match (hdr_out, pipe.working) {
-            (true, filmcraft_color::WorkingSpace::Rec2100Pq) => ColorSignal::PQ,
+            (true, reelwright_color::WorkingSpace::Rec2100Pq) => ColorSignal::PQ,
             (true, _) => ColorSignal::HLG,
             _ => ColorSignal::default(),
         };
@@ -277,14 +277,14 @@ impl Exporter {
         if progress.cancel.load(Ordering::Relaxed) {
             return Err(ExportError::Cancelled);
         }
-        let _ = filmcraft_media::pending::take();
+        let _ = reelwright_media::pending::take();
         if !self.measured {
             if !self.settings.part_of_batch {
                 progress.set_status("Measuring loudness");
             }
             let a = self.audio.as_mut().ok_or_else(|| ExportError::Encode("internal: the audio pipeline was not created".into()))?;
             a.measure(&self.settings, sources, &|| progress.cancel.load(Ordering::Relaxed))?;
-            if filmcraft_media::pending::take() {
+            if reelwright_media::pending::take() {
                 return Ok(Step::Pending);
             }
             *progress.loudness.lock().unwrap_or_else(|e| e.into_inner()) = a.loudness;
@@ -299,7 +299,7 @@ impl Exporter {
             let pipe = &self.pipe;
             let frames: Vec<(Vec<u8>, Vec<f32>)> = (f..end).into_par_iter().map(|fi| pipe.frame(fi, sources)).collect();
             if self.first_pass {
-                if filmcraft_media::pending::take() {
+                if reelwright_media::pending::take() {
                     return Ok(Step::Pending);
                 }
                 self.encode(&frames, f)?;
@@ -317,7 +317,7 @@ impl Exporter {
                     mixed.push(self.audio.as_mut().and_then(|a| a.pull(until, sources)));
                 }
             }
-            if filmcraft_media::pending::take() {
+            if reelwright_media::pending::take() {
                 return Ok(Step::Pending);
             }
             let mut mixed = mixed.into_iter();
@@ -349,7 +349,7 @@ impl Exporter {
             return Ok(Step::Progress);
         }
         let mixed = self.audio.as_mut().and_then(|a| a.rest(sources));
-        if filmcraft_media::pending::take() {
+        if reelwright_media::pending::take() {
             return Ok(Step::Pending);
         }
         if self.mux.is_none() && self.mxf.is_none() {

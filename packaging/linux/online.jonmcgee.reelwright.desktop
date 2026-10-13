@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Reelwright
+GenericName=Video Editor
+Comment=Edit video, color and sound
+Exec=reelwright %F
+TryExec=reelwright
+Icon=online.jonmcgee.reelwright
+Terminal=false
+StartupNotify=true
+StartupWMClass=online.jonmcgee.reelwright
+Categories=AudioVideo;Video;AudioVideoEditing;
+Keywords=video;editor;film;timeline;color;grading;nle;

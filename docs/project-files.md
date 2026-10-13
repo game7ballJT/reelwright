@@ -1,28 +1,28 @@
 # Project files
 
-FilmCraft projects are `.fcproj` files: UTF-8 JSON with an explicit schema version. Reading and
-writing them is `crates/format` (`filmcraft-format`); the engine's `file.*` commands use it.
+Reelwright projects are `.fcproj` files: UTF-8 JSON with an explicit schema version. Reading and
+writing them is `crates/format` (`reelwright-format`); the engine's `file.*` commands use it.
 
 ## Format
 
 ```json
 {
-  "format": "filmcraft.project",
+  "format": "reelwright.project",
   "schema_version": 12,
-  "generator": "FilmCraft 0.1.0",
+  "generator": "Reelwright 0.1.0",
   "project": { "name": "…", "settings": { … }, "root": { … }, "items": { … }, "next_id": 48 },
   "view": { "open_sequences": [21, 50], "active_sequence": 50, "sequences": { "21": { "pps": 40.0, "scroll": 0.0, … } } }
 }
 ```
 
 - `schema_version` is the version of the whole document. This build writes
-  `filmcraft_format::SCHEMA_VERSION` and reads every version from 1 up to it.
-- `project` is the serialized `filmcraft_project::Project` (bins, media clips, sequences, tracks,
+  `reelwright_format::SCHEMA_VERSION` and reads every version from 1 up to it.
+- `project` is the serialized `reelwright_project::Project` (bins, media clips, sequences, tracks,
   clips, effects, keyframes, markers). Media is referenced by path, never embedded.
 - Files are written compact (no indentation). A 2,000-clip project is about 1.4 MB.
 - `view` (optional) is what was open when the project was saved: the Timeline's sequence tabs in
   order, the active one, and each sequence's zoom, scroll and track heights
-  (`filmcraft_project::ProjectView`). It is beside the project, not in it: it is not part of the
+  (`reelwright_project::ProjectView`). It is beside the project, not in it: it is not part of the
   edit, never an undo step, and changing it does not mark the project as changed. Opening a
   project restores it when the Timeline preference "Restore open sequences when opening projects"
   is on. It is outside the schema version: older builds ignore it, ids that are not sequences and
@@ -56,7 +56,7 @@ writing them is `crates/format` (`filmcraft-format`); the engine's `file.*` comm
 ### Migrations
 
 Older files are upgraded on load, in memory, by a chain of single-step functions
-(`filmcraft_format::MIGRATIONS`, where entry *i* upgrades v*i+1* to v*i+2*). Each step rewrites the JSON
+(`reelwright_format::MIGRATIONS`, where entry *i* upgrades v*i+1* to v*i+2*). Each step rewrites the JSON
 document; after the last one the result is deserialized into the current model. To change the schema:
 
 1. add a function `vN_to_vN1(doc: Value) -> Result<Value, String>` and append it to `MIGRATIONS`
@@ -71,23 +71,23 @@ But when new data would make the file unreadable to an older build (a new enum v
 the file with the message below instead of failing with a parse error. Do the same when an older
 build would load the file but silently drop new fields on its next save.
 
-When you open an older file FilmCraft says so ("Upgraded project from schema v1 to v2"). The file
+When you open an older file Reelwright says so ("Upgraded project from schema v1 to v2"). The file
 on disk is unchanged until you save. The **first save over it** keeps the original next to it as
-`<name> (schema v1 backup).fcproj`, so an older FilmCraft can still open your work.
+`<name> (schema v1 backup).fcproj`, so an older Reelwright can still open your work.
 
 ### Newer files
 
 A file with a `schema_version` newer than the build supports is **refused**, not half-read:
 
-> this project was saved by a newer version of FilmCraft (project schema v12); this build reads up to
-> v11. Update FilmCraft to open it.
+> this project was saved by a newer version of Reelwright (project schema v12); this build reads up to
+> v11. Update Reelwright to open it.
 
 Reading it partially and saving it back would silently drop whatever the newer version added.
 
 ## Saving is atomic
 
 Every write of a project file, auto-save, recovery snapshot or preferences file goes through
-`filmcraft_format::atomic_write`:
+`reelwright_format::atomic_write`:
 
 1. write the bytes to a hidden temp file in the **same directory** (`.<name>.<pid>-<n>.tmp`);
 2. `fsync` the temp file;
@@ -111,7 +111,7 @@ In the UI, Save / Save As / Save a Copy without a `path` show a file dialog.
 
 ## Auto Save
 
-Preferences ▸ Auto Save (Edit ▸ Preferences ▸ Auto Save…, ⌘,; FilmCraft ▸ Settings… on macOS) works
+Preferences ▸ Auto Save (Edit ▸ Preferences ▸ Auto Save…, ⌘,; Reelwright ▸ Settings… on macOS) works
 like Premiere's:
 
 | Setting | Key | Default |
@@ -134,16 +134,16 @@ Preferences are stored in `<data dir>/preferences.json`. The `prefs.*` commands 
 
 ## Crash recovery
 
-Premiere's auto-save can lose up to one interval of work. FilmCraft also keeps a **recovery journal**:
+Premiere's auto-save can lose up to one interval of work. Reelwright also keeps a **recovery journal**:
 
 - Whenever the project has unsaved changes, a snapshot is written to
   `<data dir>/Recovery/<started>-<pid>[-<n>]/snapshot.fcproj`, plus `session.json` (time, revision, project
   name and path). It is written about 1 s after the last edit, or after at most
   `recoveryIntervalSeconds` while edits keep coming. Saving the project deletes the snapshot.
-- Each running FilmCraft holds an OS file lock on `<session>/lock`. When the process dies (crash,
+- Each running Reelwright holds an OS file lock on `<session>/lock`. When the process dies (crash,
   `kill -9`, power loss) the OS releases the lock.
 - At startup, every other session directory whose lock can be taken and that has a snapshot is a
-  recovery candidate. FilmCraft asks: *"FilmCraft quit unexpectedly while 'X' had unsaved changes.
+  recovery candidate. Reelwright asks: *"Reelwright quit unexpectedly while 'X' had unsaved changes.
   Recover unsaved changes from 2026-10-01 00:02:09?"*, with the buttons **Recover**, **Not Now** and
   **Discard**. Stale directories without a snapshot are removed. Journals of running sessions are
   never touched.
@@ -151,22 +151,22 @@ Premiere's auto-save can lose up to one interval of work. FilmCraft also keeps a
   over the original file. The recovered state goes into the new session's own journal before the old
   journal is deleted.
 - A normal quit with nothing unsaved removes the session directory. Quitting with unsaved changes
-  keeps the snapshot, marked `cleanExit`, and FilmCraft offers it on the next launch ("FilmCraft was
+  keeps the snapshot, marked `cleanExit`, and Reelwright offers it on the next launch ("Reelwright was
   closed while … had unsaved changes"). There is no "Save changes?" prompt on quit yet, so this
   keeps the work.
 
 Desktop flags: `--recover` recovers the newest candidate without asking. `--no-recover` starts
 without asking; the changes stay available through File ▸ Recover Unsaved Changes…. `--data-dir
-<dir>` (or `FILMCRAFT_DATA_DIR`) moves the data directory. The default is `~/Library/Application
-Support/FilmCraft` on macOS, `%APPDATA%\FilmCraft` on Windows, and `$XDG_DATA_HOME/filmcraft` or
-`~/.local/share/filmcraft` elsewhere.
+<dir>` (or `REELWRIGHT_DATA_DIR`) moves the data directory. The default is `~/Library/Application
+Support/Reelwright` on macOS, `%APPDATA%\Reelwright` on Windows, and `$XDG_DATA_HOME/reelwright` or
+`~/.local/share/reelwright` elsewhere.
 
 ### Cost
 
 The UI thread only gives the worker thread an `Arc<Project>`: the immutable snapshot the engine
 already keeps for undo, passed through a channel. JSON encoding and all file I/O run on the
-`filmcraft-autosave` thread. Measured on the development Mac (release build) with a 2,000-clip project
-(`cargo test --release -p filmcraft-format --test fixtures -- --nocapture`):
+`reelwright-autosave` thread. Measured on the development Mac (release build) with a 2,000-clip project
+(`cargo test --release -p reelwright-format --test fixtures -- --nocapture`):
 
 | Step | Time | Size |
 |---|---|---|
@@ -207,7 +207,7 @@ Every value is a dotted key whose first segment is its category: `timeline.still
 `labels.colors.rose.name`. `prefs.get` / `prefs.set` / `prefs.reset {category?}` reach them from the
 CLI, the control channel and MCP; `prefs.set` rejects values that are not one of a dropdown's
 choices. `prefs.schema {category?}` lists every category with its fields (label, kind, choices,
-range, unit, current value, and `wired`: whether FilmCraft acts on it yet). `app.settings.<category>`
+range, unit, current value, and `wired`: whether Reelwright acts on it yet). `app.settings.<category>`
 opens the dialog on a page.
 
 | Category | Takes effect |
@@ -328,7 +328,7 @@ full resolution (48 dB at ½ playback resolution). **Export always uses full res
 not an edit and doesn't mark the project as modified.
 
 **Cost.** These numbers are from `proxy_playback_perf_4k`, an ignored test: `RAYON_NUM_THREADS=1
-cargo test --release -p filmcraft-engine proxy_playback_perf_4k -- --ignored --nocapture`. It plays a
+cargo test --release -p reelwright-engine proxy_playback_perf_4k -- --ignored --nocapture`. It plays a
 2 s 3840×2160 H.264 clip (ffmpeg `testsrc2`, libx264) on one core of the development Mac and reports
 milliseconds per frame:
 
@@ -389,12 +389,12 @@ Dialog ids: `pm.seq.<id>`, `pm.mode.<collect|consolidate>`, `pm.preset.<id>`, `p
 ## Effect presets
 
 Effect presets (Effects panel ▸ Presets; Effect Controls ▸ right-click an effect ▸ Save Preset…) are
-not part of the project. Built-in presets are defined in code (`filmcraft_engine::presets`); user
+not part of the project. Built-in presets are defined in code (`reelwright_engine::presets`); user
 presets live in `<data dir>/effect-presets.json`, and `presets.export` / `presets.import` read and
 write the same JSON format:
 
 ```json
-{"format": "filmcraft.effect-presets", "version": 1, "presets": [
+{"format": "reelwright.effect-presets", "version": 1, "presets": [
   {"name": "My Vignette", "description": "", "keyframes": "AnchorToIn",
    "source_duration": 2540160000000, "source_size": [1920, 1080],
    "effects": [ /* EffectInstance, exactly as in .fcproj: effect, enabled, params, masks */ ]}

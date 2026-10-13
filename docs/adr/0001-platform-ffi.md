@@ -6,7 +6,7 @@
 
 ## Context
 
-FilmCraft is pure Rust and the workspace sets `unsafe_code = "forbid"`. Every codec has a
+Reelwright is pure Rust and the workspace sets `unsafe_code = "forbid"`. Every codec has a
 clean-room software decoder, and those remain the reference. But decoding 4K H.264 / HEVC in
 software costs 85–120 ms of CPU per frame on an M4 Pro, so 4K playback drops frames under load,
 while every current computer has a hardware video decoder the operating system exposes
@@ -17,7 +17,7 @@ Using it needs FFI into C / Objective-C APIs, which is `unsafe` Rust. The bindin
 
 ## Decision
 
-Allow `unsafe` in exactly one crate, `crates/platform` (`filmcraft-platform`, layer L5), for one
+Allow `unsafe` in exactly one crate, `crates/platform` (`reelwright-platform`, layer L5), for one
 job: OS media FFI (hardware decoding, and hardware encoding through NVENC). Audio output, dialogs, menus
 and other OS integration do not go in it.
 
@@ -76,7 +76,7 @@ Registering a hardware decoder never makes a file undecodable, and never changes
 ## Addendum (2026-10-06): hardware H.264 encoding
 
 The crate's second use of the FFI is the one this decision named, hardware encoding: a VideoToolbox
-H.264 encoder behind `filmcraft_export::VideoEncoder` (`videotoolbox_encode`, with the same
+H.264 encoder behind `reelwright_export::VideoEncoder` (`videotoolbox_encode`, with the same
 containment rules; `hardware_encode` is safe code). It differs from decoding in two ways, both
 deliberate:
 
@@ -98,6 +98,6 @@ compiles everywhere (`register()` is a no-op off macOS).
 The same VideoToolbox session wrapper also creates HEVC sessions (`VtProfile::HevcMain`). The rules
 above hold; HEVC adds one difference. The crate has no software HEVC encoder to fall back to, and
 there will not be one (pure Rust, clean-room: x265 is GPL), so `Format::Hevc` exists only where the
-OS has a hardware encoder. Choosing the format is the opt-in, `filmcraft_export::available` asks a
+OS has a hardware encoder. Choosing the format is the opt-in, `reelwright_export::available` asks a
 probe the platform crate registers, and what the hardware path does not take (two-pass, odd sizes,
 a machine without the encoder) is an error naming the reason instead of a different encoder.

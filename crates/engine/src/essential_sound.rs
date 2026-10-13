@@ -1,9 +1,9 @@
 //! Essential Sound commands (`essentialSound.*`).
 //!
 //! Clips get an audio type (Dialogue / Music / SFX / Ambience) and per-type settings
-//! ([`filmcraft_project::essential`]). Every change goes through one undoable edit that updates the
+//! ([`reelwright_project::essential`]). Every change goes through one undoable edit that updates the
 //! settings and reconciles the clip's essential effects, clip gain, Volume and Panner
-//! ([`filmcraft_project::essential::apply`]), so what the panel does is ordinary clip data that the
+//! ([`reelwright_project::essential::apply`]), so what the panel does is ordinary clip data that the
 //! mixer, playback and export render without special cases.
 //!
 //! | command | does |
@@ -17,11 +17,11 @@
 
 use serde_json::{Value, json};
 
-use filmcraft_audio_dsp::LoudnessMeter;
-use filmcraft_project::essential::{self as es, AudioType, EssentialSound, Preset, Section};
-use filmcraft_project::{ClipId, ParamValue, Project, TrackItem};
-use filmcraft_render::SourceProvider;
-use filmcraft_time::Tick;
+use reelwright_audio_dsp::LoudnessMeter;
+use reelwright_project::essential::{self as es, AudioType, EssentialSound, Preset, Section};
+use reelwright_project::{ClipId, ParamValue, Project, TrackItem};
+use reelwright_render::SourceProvider;
+use reelwright_time::Tick;
 
 use crate::autosave::UserSoundPreset;
 use crate::commands::{CommandSpec, always, bad, bool_p, f64_p, has_seq, str_p, with_links};
@@ -269,7 +269,7 @@ pub fn clip_loudness(item: &TrackItem, sr: u32, sources: &dyn SourceProvider) ->
     let mut pos = a0;
     while pos < a1 {
         let n = (a1 - pos).min(sr as i64) as usize;
-        let [l, r] = filmcraft_render::audio::clip_signal(item, pos, n, sr, sources)?;
+        let [l, r] = reelwright_render::audio::clip_signal(item, pos, n, sr, sources)?;
         meter.process(&[&l, &r]);
         pos += n as i64;
     }
@@ -299,7 +299,7 @@ fn auto_match(s: &mut Session, p: &Value) -> Result<Value> {
         // the clip gain (including any earlier match gain) applies linearly after the effects
         let current = st.loudness_gain_db();
         let measured = l - current;
-        let gain = filmcraft_audio_dsp::normalize_gain_db(measured, target);
+        let gain = reelwright_audio_dsp::normalize_gain_db(measured, target);
         matches.push((it.id, measured, target, gain));
         report.push(json!({"clip": it.id.0, "measuredLufs": measured, "targetLufs": target, "gainDb": gain}));
     }
@@ -340,7 +340,7 @@ fn trigger_envelope(triggers: &[&TrackItem], a0: i64, a1: i64, sr: u32, sources:
         let n = ((a1 - pos) as usize).min(chunk);
         let mut sum = [vec![0.0f32; n], vec![0.0f32; n]];
         for t in triggers {
-            if let Some(b) = filmcraft_render::audio::clip_signal(t, pos, n, sr, sources) {
+            if let Some(b) = reelwright_render::audio::clip_signal(t, pos, n, sr, sources) {
                 for c in 0..2 {
                     for (d, x) in sum[c].iter_mut().zip(&b[c]) {
                         *d += x;
@@ -391,8 +391,8 @@ fn generate_ducking(s: &mut Session, p: &Value) -> Result<Value> {
             .collect();
         let (a0, a1) = (it.start.to_units_floor(sr as i64), it.end().to_units_floor(sr as i64));
         let env = trigger_envelope(&triggers, a0, a1, sr, &provider);
-        let thr = filmcraft_audio_dsp::ducking::sensitivity_threshold_db(d.sensitivity as f32);
-        let regions = filmcraft_audio_dsp::ducking::activity(&env, DUCK_HOP_S as f32, thr, DUCK_MIN_ON_S, DUCK_BRIDGE_S);
+        let thr = reelwright_audio_dsp::ducking::sensitivity_threshold_db(d.sensitivity as f32);
+        let regions = reelwright_audio_dsp::ducking::activity(&env, DUCK_HOP_S as f32, thr, DUCK_MIN_ON_S, DUCK_BRIDGE_S);
         let start_s = a0 as f64 / sr as f64;
         let end_s = a1 as f64 / sr as f64;
         let abs: Vec<(f64, f64)> = regions.iter().map(|(x, y)| (start_s + x, start_s + y)).collect();
@@ -402,7 +402,7 @@ fn generate_ducking(s: &mut Session, p: &Value) -> Result<Value> {
             Some(p) => p.value.as_f64().unwrap_or(0.0),
             None => 0.0,
         };
-        let kfs = filmcraft_audio_dsp::ducking::duck_keyframes(&abs, start_s, end_s, base, d.reduce_db, d.fade_s);
+        let kfs = reelwright_audio_dsp::ducking::duck_keyframes(&abs, start_s, end_s, base, d.reduce_db, d.fade_s);
         let ticks: Vec<(Tick, f64)> = kfs.iter().map(|(t, v)| (Tick::from_seconds_f64(*t).clamp(it.start, it.end()), *v)).collect();
         report.push(json!({
             "clip": it.id.0,

@@ -33,10 +33,10 @@
 //! Navigation and targeting are editor state (not undoable, as in Premiere); everything that
 //! changes the project is one undo step.
 
-use filmcraft_edit as edit;
-use filmcraft_geom::Vec2;
-use filmcraft_project::{ClipId, ItemKind, ParamValue, Sequence, TrackId, TrackKind};
-use filmcraft_time::Tick;
+use reelwright_edit as edit;
+use reelwright_geom::Vec2;
+use reelwright_project::{ClipId, ItemKind, ParamValue, Sequence, TrackId, TrackKind};
+use reelwright_time::Tick;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, always, bad, has_selection, has_seq, item_p, str_p, time_p, with_links};
@@ -53,7 +53,7 @@ fn spec(id: &'static str, label: &'static str, shortcut: Option<&'static str>, p
 pub const POSTER_FRAME_KEY: &str = "Poster Frame";
 
 /// An item's poster frame (Set Poster Frame), if one is set.
-pub fn poster_frame(item: &filmcraft_project::ProjectItem) -> Option<Tick> {
+pub fn poster_frame(item: &reelwright_project::ProjectItem) -> Option<Tick> {
     item.metadata.get(POSTER_FRAME_KEY).and_then(|v| v.parse::<i64>().ok()).map(Tick)
 }
 
@@ -105,7 +105,7 @@ fn reveal_nested(s: &mut Session) -> Result<Value> {
     let ph = s.playhead();
     let tg = s.targeting().targeted;
     let seq = s.active_sequence().ok_or(EngineError::NoSequence)?;
-    let is_nest = |it: &filmcraft_project::TrackItem| s.project.sequence(it.item).is_some();
+    let is_nest = |it: &reelwright_project::TrackItem| s.project.sequence(it.item).is_some();
     let pick = s
         .state
         .selection
@@ -354,7 +354,7 @@ fn toggle_targeted_tracks(s: &mut Session, kind: TrackKind, what: &'static str) 
     };
     s.edit_sequence(label, |q, _, _| {
         // all on → all off, else all on
-        let get = |t: &filmcraft_project::Track| match what {
+        let get = |t: &reelwright_project::Track| match what {
             "mute" => t.muted,
             "solo" => t.solo,
             _ => !t.enabled,
@@ -424,7 +424,7 @@ fn text_layer_targets(s: &Session) -> Result<(ClipId, Vec<usize>)> {
     let clip = crate::graphics::target_clip(s, &Value::Null).ok_or_else(|| EngineError::Other("select a graphic clip".into()))?;
     let seq = s.active_sequence().ok_or(EngineError::NoSequence)?;
     let (_, it) = seq.find_item(clip).ok_or_else(|| EngineError::Other("no such clip".into()))?;
-    let idx = filmcraft_project::graphic::layer_indices(&it.effects);
+    let idx = reelwright_project::graphic::layer_indices(&it.effects);
     if idx.is_empty() {
         return Err(EngineError::Other("the graphic has no layers".into()));
     }
@@ -441,7 +441,7 @@ fn edit_layers(s: &mut Session, label: &str, param: &'static str, text_only: boo
     let (clip, layers) = text_layer_targets(s)?;
     let tl = s.playhead();
     let n = s.edit_sequence(label, |q, _, _| {
-        let (_, it) = q.find_item_mut(clip).ok_or(filmcraft_edit::EditError::NoItem(clip))?;
+        let (_, it) = q.find_item_mut(clip).ok_or(reelwright_edit::EditError::NoItem(clip))?;
         let mt = it.source_time_at(tl.clamp(it.start, it.end() - Tick(1)));
         let mut n = 0;
         for ei in &layers {
@@ -534,9 +534,9 @@ fn sanitize(name: &str) -> String {
 fn export_frame(s: &mut Session, p: &Value) -> Result<Value> {
     let fmt = str_p(p, "format").unwrap_or("png").to_ascii_lowercase();
     let format = match fmt.as_str() {
-        "png" => filmcraft_export::Format::PngSequence,
-        "tif" | "tiff" => filmcraft_export::Format::TiffSequence,
-        "bmp" => filmcraft_export::Format::BmpSequence,
+        "png" => reelwright_export::Format::PngSequence,
+        "tif" | "tiff" => reelwright_export::Format::TiffSequence,
+        "bmp" => reelwright_export::Format::BmpSequence,
         _ => return Err(bad("file.exportFrame", "format must be png, tiff or bmp")),
     };
     let ext = if fmt == "tif" { "tiff" } else { fmt.as_str() };
@@ -559,7 +559,7 @@ fn export_frame(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let img = s.render_program(1.0).ok_or(EngineError::NoSequence)?;
     let (w, h) = (img.w as u32, img.h as u32);
-    let bytes = filmcraft_export::encode_still(format, img.to_rgba8(), w, h).map_err(|e| EngineError::Other(e.to_string()))?;
+    let bytes = reelwright_export::encode_still(format, img.to_rgba8(), w, h).map_err(|e| EngineError::Other(e.to_string()))?;
     s.services.write_file(&path, &bytes).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
     let mut out = json!({"path": path, "width": w, "height": h});
     if p.get("import").and_then(Value::as_bool).unwrap_or(false) {
@@ -571,7 +571,7 @@ fn export_frame(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The item Set / Clear Poster Frame acts on, and the frame: `item` + time, else the Source
 /// monitor clip at its playhead, else the first Project panel selection (its current poster).
-fn poster_target(s: &Session, p: &Value) -> Option<(filmcraft_project::ItemId, Tick)> {
+fn poster_target(s: &Session, p: &Value) -> Option<(reelwright_project::ItemId, Tick)> {
     if let Some(i) = item_p(p, "item") {
         return Some((i, time_p(s, p, "").unwrap_or_default()));
     }
@@ -703,7 +703,7 @@ pub fn commands() -> Vec<CommandSpec> {
         spec("graphics.nudgeUp5", "Nudge Selected Object up by five", None, "{}", has_graphic_or_selection, |s, _| nudge_object(s, 0.0, -5.0)),
         spec("graphics.nudgeDown5", "Nudge Selected Object down by five", None, "{}", has_graphic_or_selection, |s, _| nudge_object(s, 0.0, 5.0)),
         // ---- export frame, poster frame
-        // Shift+E is Clip > Enable in FilmCraft Default; the Premiere preset moves it here
+        // Shift+E is Clip > Enable in Reelwright Default; the Premiere preset moves it here
         spec("file.exportFrame", "Export Frame", None, r#"{"path":str?,"format":"png|tiff|bmp"?,"import":bool?}"#, has_seq, export_frame),
         spec("clip.setPosterFrame", "Set Poster Frame", Some("Cmd+P"), r#"{"item":id?,"time":ticks?}"#, has_poster_target, |s, p| set_poster(s, p, false)),
         spec("clip.clearPosterFrame", "Clear Poster Frame", Some("Alt+P"), r#"{"item":id?}"#, has_poster_target, |s, p| set_poster(s, p, true)),
