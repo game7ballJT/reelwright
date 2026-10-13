@@ -337,6 +337,7 @@ Reelwright is one of a growing family of forks of the ArtCraft Team's creative a
 |:-:|---|---|---|---|---|
 | <img src="https://raw.githubusercontent.com/game7ballJT/pixelwright/main/assets/app-icon/hicolor/64x64/apps/online.jonmcgee.pixelwright.png" alt="" width="32" height="32"> | **Pixelwright** | Image editing: layers, masks, type and real PSD files | [PhotoCraft](https://github.com/storytold/photocraft) | [GitHub](https://github.com/game7ballJT/pixelwright) | [Try it](https://www.jonmcgee.online/apps/pixelwright/) |
 | <img src="https://raw.githubusercontent.com/game7ballJT/splinewright/main/assets/app-icon/hicolor/64x64/apps/online.jonmcgee.splinewright.png" alt="" width="32" height="32"> | **Splinewright** | Vector illustration: paths, Pathfinder, live effects, SVG and PDF | [VectorCraft](https://github.com/storytold/vectorcraft) | [GitHub](https://github.com/game7ballJT/splinewright) | [Try it](https://www.jonmcgee.online/apps/splinewright/) |
+| <img src="https://raw.githubusercontent.com/game7ballJT/reelwright/main/assets/app-icon/hicolor/64x64/apps/online.jonmcgee.reelwright.png" alt="" width="32" height="32"> | **Reelwright** (you are here) | Video editing, color and sound | [FilmCraft](https://github.com/storytold/filmcraft) | [GitHub](https://github.com/game7ballJT/reelwright) | [Try it](https://www.jonmcgee.online/apps/reelwright/) |
 
 ## Credits and license
 
