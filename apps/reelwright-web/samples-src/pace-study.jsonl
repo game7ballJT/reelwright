@@ -1,0 +1,13 @@
+{"id":"timeline.razor","params":{"seconds":5.6,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":6.1,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":6.5,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":6.9,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":7.2,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":7.6,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":7.9,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":8.3,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":8.6,"track":"V1"}}
+{"id":"timeline.razor","params":{"seconds":9,"track":"V1"}}
+{"id":"markers.addChapter","params":{"seconds":0,"name":"Slow open"}}
+{"id":"markers.addChapter","params":{"seconds":5.5,"name":"Quick cuts"}}
+{"id":"markers.addChapter","params":{"seconds":9.5,"name":"Settle"}}

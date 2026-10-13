@@ -1,0 +1,8 @@
+{"id":"captions.add","params":{"seconds":0.5,"durationSeconds":3,"text":"Welcome to the Reelwright demo."}}
+{"id":"captions.add","params":{"seconds":4.0,"durationSeconds":1.5,"text":"Almost touching,"}}
+{"id":"captions.add","params":{"seconds":5.51,"durationSeconds":1.5,"text":"the next caption follows."}}
+{"id":"captions.add","params":{"seconds":8,"durationSeconds":1,"text":"This caption is read far\ntoo quickly to follow"}}
+{"id":"captions.add","params":{"seconds":10,"durationSeconds":4.5,"text":"One line that runs much longer than forty-two characters"}}
+{"id":"captions.add","params":{"seconds":15,"durationSeconds":3,"text":"One\ntwo\nthree\nfour lines"}}
+{"id":"captions.add","params":{"seconds":18.5,"durationSeconds":0.3,"text":"Hi"}}
+{"id":"captions.add","params":{"seconds":19.2,"durationSeconds":7.6,"text":"Stays on screen far too long"}}
